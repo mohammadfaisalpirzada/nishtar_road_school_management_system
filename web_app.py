@@ -106,14 +106,21 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Initialize Google Sheets data entry
-try:
-    data_entry = GoogleSheetsDataEntry()
-    print("Using Google Sheets for data storage")
-except Exception as e:
-    print(f"Failed to initialize Google Sheets: {e}")
-    print("Please check your Google Sheets configuration in .env file")
-    raise e
+# Initialize Google Sheets data entry lazily and safely.
+# Do not raise on failure to allow the web process to start (healthchecks must succeed).
+data_entry = None
+use_sheets = os.environ.get('USE_GOOGLE_SHEETS', 'False').lower() in ('1', 'true', 'yes')
+if use_sheets:
+    try:
+        data_entry = GoogleSheetsDataEntry()
+        print("Using Google Sheets for data storage")
+    except Exception as e:
+        # Log and continue; the app will run in a degraded mode without Google Sheets.
+        print(f"Warning: Failed to initialize Google Sheets: {e}")
+        print("Continuing without Google Sheets. Set USE_GOOGLE_SHEETS=true and provide credentials in env to enable.")
+        data_entry = None
+else:
+    print("Google Sheets usage disabled (USE_GOOGLE_SHEETS not set). Running in offline mode.")
 
 # Cache system for better performance
 class DataCache:
@@ -649,6 +656,8 @@ def settings():
 @login_required
 def api_class_wise_data():
     """API endpoint to get class-wise data overview"""
+    if data_entry is None:
+        return jsonify({'success': False, 'message': 'Google Sheets not configured. Set USE_GOOGLE_SHEETS=true and provide credentials.'}), 503
     try:
         # Try to get from cache first
         cached_data = data_cache.get_class_wise_data()
@@ -720,6 +729,8 @@ def api_class_wise_data():
 def api_next_class_snos():
     """Return next serial number for each class in one request to reduce client fetches"""
     try:
+        if data_entry is None:
+            return jsonify({'success': False, 'message': 'Google Sheets not configured.'}), 503
         classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
         result = {}
         for cls in classes:
@@ -771,6 +782,8 @@ def api_class_data(class_name):
         return jsonify({'success': False, 'message': 'Access denied'})
     
     try:
+        if data_entry is None:
+            return jsonify({'success': False, 'message': 'Google Sheets not configured.'}), 503
         # Try to get from cache first
         cached_data = data_cache.get_class_data(class_name)
         if cached_data is not None:
