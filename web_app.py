@@ -1071,6 +1071,16 @@ def student_details():
         flash(f'Error loading student details: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
+
+@app.route('/health')
+def health():
+    """Lightweight healthcheck endpoint for load balancers and platform healthchecks.
+
+    This endpoint deliberately avoids any Google Sheets calls so it responds quickly
+    during deployments and prevents healthcheck-related quota usage.
+    """
+    return jsonify({'success': True, 'status': 'ok'}), 200
+
 @app.route('/print_student/<sheet_name>/<int:row_number>')
 @login_required
 def print_student(sheet_name, row_number):
