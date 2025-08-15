@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class {{ class_name }} Report - Student Data Entry</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #28a745;
+            font-size: 1.8rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .report-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .report-title {
+            font-size: 2.5rem;
+            color: #28a745;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-subtitle {
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 2rem;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #5a6268;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                padding: 1rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Class {{ class_name }} Report</h1>
+        <div class="user-info">
+            <span>Data Analytics</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="{{ url_for('class_dashboard', class_name=class_name) }}" class="back-btn">← Back to Class Dashboard</a>
+        
+        <div class="report-header">
+            <div class="report-title">Class {{ class_name }}</div>
+            <div class="report-subtitle">Comprehensive Data Analysis Report</div>
+        </div>
+
+        <div class="stats-overview" id="stats-overview">
+            <div class="loading">Loading statistics...</div>
+        </div>
+
+        <div class="charts-grid" id="charts-container">
+            <div class="loading">Loading charts...</div>
+        </div>
+    </div>
+
+    <script>
+        const className = '{{ class_name }}';
+        let reportData = null;
+
+        // Color schemes for charts
+        const genderColors = {
+            'Male': '#3498db',
+            'Female': '#e91e63'
+        };
+
+        const ageColors = {
+            '3-5': '#ff6b6b',
+            '6-8': '#4ecdc4',
+            '9-11': '#45b7d1',
+            '12-14': '#96ceb4',
+            '15+': '#feca57'
+        };
+
+        const sectionColors = {
+            'Boys': '#3498db',
+                'Girls': '#e91e63'
+        };
+
+        function loadReportData() {
+            fetch(`/api/class_report_data/${className}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        reportData = data;
+                        renderStatistics();
+                        renderCharts();
+                    } else {
+                        showError('Failed to load report data: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    showError('Error loading report data: ' + error.message);
+                });
+        }
+
+        function renderStatistics() {
+            const statsContainer = document.getElementById('stats-overview');
+            const totalStudents = reportData.total_students;
+            const maleCount = reportData.gender_data.Male || 0;
+            const femaleCount = reportData.gender_data.Female || 0;
+            const boysSection = reportData.section_data.Boys || 0;
+            const girlsSection = reportData.section_data.Girls || 0;
+
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalStudents}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${maleCount}</div>
+                    <div class="stat-label">Male Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${femaleCount}</div>
+                    <div class="stat-label">Female Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${boysSection}</div>
+                    <div class="stat-label">Boys Section</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${girlsSection}</div>
+                    <div class="stat-label">Girls Section</div>
+                </div>
+            `;
+        }
+
+        function renderCharts() {
+            const chartsContainer = document.getElementById('charts-container');
+            
+            chartsContainer.innerHTML = `
+                <div class="chart-container">
+                    <h3 class="chart-title">Gender Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Age Group Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Section Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="sectionChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            // Render Gender Chart
+            renderGenderChart();
+            
+            // Render Age Chart
+            renderAgeChart();
+            
+            // Render Section Chart
+            renderSectionChart();
+        }
+
+        function renderGenderChart() {
+            const ctx = document.getElementById('genderChart').getContext('2d');
+            const genderData = reportData.gender_data;
+            
+            const labels = Object.keys(genderData).filter(key => genderData[key] > 0);
+            const data = labels.map(label => genderData[label]);
+            const colors = labels.map(label => genderColors[label]);
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderAgeChart() {
+            const ctx = document.getElementById('ageChart').getContext('2d');
+            const ageData = reportData.age_data;
+            
+            const labels = Object.keys(ageData).filter(key => ageData[key] > 0);
+            const data = labels.map(label => ageData[label]);
+            const colors = labels.map(label => ageColors[label]);
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels.map(label => `${label} years`),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderSectionChart() {
+            const ctx = document.getElementById('sectionChart').getContext('2d');
+            const sectionData = reportData.section_data;
+            
+            const labels = Object.keys(sectionData).filter(key => sectionData[key] > 0);
+            const data = labels.map(label => sectionData[label]);
+            const colors = labels.map(label => sectionColors[label]);
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels.map(label => `${label} Section`),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showError(message) {
+            const statsContainer = document.getElementById('stats-overview');
+            const chartsContainer = document.getElementById('charts-container');
+            
+            const errorHtml = `<div class="error">${message}</div>`;
+            statsContainer.innerHTML = errorHtml;
+            chartsContainer.innerHTML = errorHtml;
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReportData();
+        });
+    </script>
+</body>
+</html>

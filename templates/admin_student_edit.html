@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Edit Student - Student Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .back-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .edit-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .form-container {
+            padding: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-section {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .form-input.saving {
+            border-color: #ed8936;
+            background: #fef5e7;
+        }
+
+        .form-input.saved {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .readonly-field {
+            background: #f7fafc !important;
+            color: #718096;
+            cursor: not-allowed;
+        }
+
+        .save-status {
+            display: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .save-status.saving {
+            display: block;
+            background: #fef5e7;
+            color: #c05621;
+            border: 1px solid #ed8936;
+        }
+
+        .save-status.success {
+            display: block;
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #48bb78;
+        }
+
+        .save-status.error {
+            display: block;
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #e53e3e;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .container {
+                margin: 1rem auto;
+                padding: 0 0.5rem;
+            }
+
+            .form-container {
+                padding: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .form-section {
+                padding: 1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        /* Developer Footer */
+        .developer-footer {
+            background: linear-gradient(135deg, #2d3748, #4a5568);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4299e1, #48bb78);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-contact {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-item {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .footer-copyright {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .footer-contact {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>✏️ Admin Edit Student</h1>
+            <p>Govt Girls Secondary School Nishtar Road Khi</p>
+        </div>
+        <button onclick="goBack()" class="back-btn">← Back to Data Edit</button>
+    </div>
+
+    <div class="container">
+        <div id="message"></div>
+        
+        <div id="loading" class="loading">
+            <p>Loading student details...</p>
+        </div>
+        
+        <div id="editCard" class="edit-card" style="display: none;">
+            <div class="card-header">
+                <h2 id="studentName">Student Name</h2>
+                <p id="studentClass">Class Information</p>
+            </div>
+            
+            <div class="form-container">
+                <form id="editForm">
+                    <div class="form-grid">
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                👤 Basic Information
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Class S.No *</label>
+                                <input type="text" id="class_sno" class="form-input readonly-field" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">GR Number *</label>
+                                <input type="text" id="gr_number" class="form-input readonly-field" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Student Name *</label>
+                                <input type="text" id="student_name" class="form-input" data-field="Student Name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Gender</label>
+                                <select id="gender" class="form-select" data-field="Gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" id="date_of_birth" class="form-input" data-field="Date of Birth">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Religion</label>
+                                <input type="text" id="religion" class="form-input" data-field="Religion">
+                            </div>
+                        </div>
+                        
+                        <!-- Family Information -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                👨‍👩‍👧‍👦 Family Information
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Father's Name *</label>
+                                <input type="text" id="father_name" class="form-input" data-field="Father's Name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Contact Number</label>
+                                <input type="tel" id="contact_number" class="form-input" data-field="Contact Number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Father/Mother's CNIC</label>
+                                <input type="text" id="parent_cnic" class="form-input" data-field="Father/Mother's CNIC" placeholder="00000-0000000-0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Guardian Name</label>
+                                <input type="text" id="guardian_name" class="form-input" data-field="Guardian Name">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Guardian CNIC</label>
+                                <input type="text" id="guardian_cnic" class="form-input" data-field="Guardian CNIC" placeholder="00000-0000000-0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Guardian Relation</label>
+                                <select id="guardian_relation" class="form-select" data-field="Guardian Relation">
+                                    <option value="">Select Relation</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Uncle">Uncle</option>
+                                    <option value="Aunt">Aunt</option>
+                                    <option value="Grandfather">Grandfather</option>
+                                    <option value="Grandmother">Grandmother</option>
+                                    <option value="Brother">Brother</option>
+                                    <option value="Sister">Sister</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Academic Information -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                🎓 Academic Information
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Student Class *</label>
+                                <select id="student_class" class="form-select" data-field="Student Class" required>
+                                    <option value="">Select Class</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="I">Class I</option>
+                                    <option value="II">Class II</option>
+                                    <option value="III">Class III</option>
+                                    <option value="IV">Class IV</option>
+                                    <option value="V">Class V</option>
+                                    <option value="VI">Class VI</option>
+                                    <option value="VII">Class VII</option>
+                                    <option value="VIII">Class VIII</option>
+                                    <option value="IX">Class IX</option>
+                                    <option value="X">Class X</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Class Section</label>
+                                <select id="class_section" class="form-select" data-field="Class Section">
+                                    <option value="">Select Section</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">SEMIS Code</label>
+                                <input type="text" id="semis_code" class="form-input" data-field="SEMIS Code">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date of Admission</label>
+                                <input type="date" id="date_of_admission" class="form-input" data-field="Date of Admission">
+                            </div>
+                        </div>
+                        
+                        <!-- Documents -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                📄 Documents
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">CNIC / B-Form</label>
+                                <input type="text" id="cnic_bform" class="form-input" data-field="CNIC / B-Form" placeholder="00000-0000000-0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="save-status" id="saveStatus"></div>
+                    
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-primary" onclick="saveAllChanges()">💾 Save All Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="goBack()">❌ Cancel</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteStudent()">🗑️ Delete Student</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Footer -->
+    <div class="developer-footer">
+        <div class="footer-content">
+            <div class="footer-logo">MS</div>
+            <div class="footer-text">Developed by <strong>MasterSahub</strong></div>
+            <div class="footer-contact">
+                <div class="contact-item">📧 Contact for Custom Solutions</div>
+                <div class="contact-item">💻 Web Development Services</div>
+                <div class="contact-item">📱 Mobile App Development</div>
+                <div class="contact-item">🎓 Educational Software Solutions</div>
+            </div>
+            <div class="footer-copyright">
+                © 2025 MasterSahub. Empowering Education Through Technology.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSheetName = null;
+        let currentRowNumber = null;
+        let currentStudent = null;
+        let saveTimeout = null;
+        let hasUnsavedChanges = false;
+
+        function showMessage(message, type = 'error') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSaveStatus(message, type = 'saving') {
+            const statusDiv = document.getElementById('saveStatus');
+            statusDiv.className = `save-status ${type}`;
+            statusDiv.textContent = message;
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function goBack() {
+            if (hasUnsavedChanges) {
+                if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    window.location.href = '/data-edit';
+                }
+            } else {
+                window.location.href = '/data-edit';
+            }
+        }
+
+        function loadStudentData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentSheetName = urlParams.get('sheet');
+            currentRowNumber = parseInt(urlParams.get('row'));
+            
+            if (!currentSheetName || !currentRowNumber) {
+                showMessage('Invalid student parameters');
+                return;
+            }
+            
+            fetch(`/api/student_details/${currentSheetName}/${currentRowNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (data.success) {
+                        currentStudent = data.student;
+                        populateForm(data.student);
+                        document.getElementById('editCard').style.display = 'block';
+                        setupAutoSave();
+                    } else {
+                        showMessage(data.message || 'Failed to load student details');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    showMessage('Error loading student details: ' + error.message);
+                });
+        }
+
+        function populateForm(student) {
+            // Update header
+            document.getElementById('studentName').textContent = student['Student Name'] || 'Unknown Student';
+            document.getElementById('studentClass').textContent = `Class ${student['Student Class'] || 'N/A'} - ${student['Class Section'] || 'N/A'} Section`;
+            
+            // Populate form fields
+            const fieldMappings = {
+                'class_sno': 'Class_S.No',
+                'gr_number': 'GR#',
+                'student_name': 'Student Name',
+                'gender': 'Gender',
+                'date_of_birth': 'Date of Birth',
+                'religion': 'Religion',
+                'father_name': "Father's Name",
+                'contact_number': 'Contact Number',
+                'parent_cnic': "Father/Mother's CNIC",
+                'guardian_name': 'Guardian Name',
+                'guardian_cnic': 'Guardian CNIC',
+                'guardian_relation': 'Guardian Relation',
+                'student_class': 'Student Class',
+                'class_section': 'Class Section',
+                'semis_code': 'SEMIS Code',
+                'date_of_admission': 'Date of Admission',
+                'cnic_bform': 'CNIC / B-Form'
+            };
+            
+            Object.entries(fieldMappings).forEach(([fieldId, studentKey]) => {
+                const element = document.getElementById(fieldId);
+                if (element && student[studentKey]) {
+                    element.value = student[studentKey];
+                }
+            });
+        }
+
+        function setupAutoSave() {
+            const editableFields = document.querySelectorAll('.form-input[data-field], .form-select[data-field]');
+            
+            editableFields.forEach(field => {
+                field.addEventListener('input', handleFieldChange);
+                field.addEventListener('change', handleFieldChange);
+            });
+        }
+
+        function handleFieldChange(event) {
+            const field = event.target;
+            const fieldName = field.getAttribute('data-field');
+            
+            if (!fieldName) return;
+            
+            hasUnsavedChanges = true;
+            field.classList.add('saving');
+            
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveField(field, fieldName);
+            }, 1000); // Auto-save after 1 second of no typing
+        }
+
+        function saveField(field, fieldName) {
+            const fieldValue = field.value;
+            
+            const updateData = {};
+            updateData[fieldName] = fieldValue;
+            
+            fetch(`/api/edit_student/${currentSheetName}/${currentRowNumber}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                field.classList.remove('saving');
+                
+                if (data.success) {
+                    field.classList.add('saved');
+                    currentStudent[fieldName] = fieldValue;
+                    showSaveStatus('Field saved successfully', 'success');
+                    
+                    setTimeout(() => {
+                        field.classList.remove('saved');
+                    }, 2000);
+                } else {
+                    showSaveStatus(data.message || 'Failed to save field', 'error');
+                }
+            })
+            .catch(error => {
+                field.classList.remove('saving');
+                showSaveStatus('Error saving field: ' + error.message, 'error');
+            });
+        }
+
+        function saveAllChanges() {
+            const editableFields = document.querySelectorAll('.form-input[data-field], .form-select[data-field]');
+            const updateData = {};
+            
+            editableFields.forEach(field => {
+                const fieldName = field.getAttribute('data-field');
+                if (fieldName && field.value !== (currentStudent[fieldName] || '')) {
+                    updateData[fieldName] = field.value;
+                }
+            });
+            
+            if (Object.keys(updateData).length === 0) {
+                showSaveStatus('No changes to save', 'success');
+                return;
+            }
+            
+            showSaveStatus('Saving all changes...', 'saving');
+            
+            fetch(`/api/edit_student/${currentSheetName}/${currentRowNumber}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Object.assign(currentStudent, updateData);
+                    hasUnsavedChanges = false;
+                    showSaveStatus('All changes saved successfully!', 'success');
+                    showMessage('Student data updated successfully!', 'success');
+                } else {
+                    showSaveStatus(data.message || 'Failed to save changes', 'error');
+                }
+            })
+            .catch(error => {
+                showSaveStatus('Error saving changes: ' + error.message, 'error');
+            });
+        }
+
+        function deleteStudent() {
+            const studentName = currentStudent['Student Name'] || 'Unknown Student';
+            
+            if (confirm(`Are you sure you want to delete ${studentName}?\n\nThis action cannot be undone.`)) {
+                const confirmName = prompt(`To confirm deletion, please type the student's name exactly:\n\n"${studentName}"`);
+                
+                if (confirmName === studentName) {
+                    fetch(`/api/delete_student/${currentSheetName}/${currentRowNumber}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showMessage(data.message, 'success');
+                            setTimeout(() => {
+                                window.location.href = '/data-edit';
+                            }, 2000);
+                        } else {
+                            showMessage(data.message || 'Failed to delete student');
+                        }
+                    })
+                    .catch(error => {
+                        showMessage('Error deleting student: ' + error.message);
+                    });
+                } else {
+                    showMessage('Student name does not match. Deletion cancelled.');
+                }
+            }
+        }
+
+        // Warn user about unsaved changes when leaving
+        window.addEventListener('beforeunload', function(e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Load student data when page loads
+        document.addEventListener('DOMContentLoaded', loadStudentData);
+    </script>
+</body>
+</html>

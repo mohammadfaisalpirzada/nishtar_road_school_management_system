@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Student Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-title h1 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            color: #718096;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+
+        .logout-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c53030;
+            transform: translateY(-1px);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-section {
+            margin-bottom: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4299e1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        /* Action Grid */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.3);
+        }
+
+        .action-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Class Grid */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .class-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .class-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .class-btn:hover::before {
+            left: 100%;
+        }
+
+        .class-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+        }
+
+        /* Data View Section */
+        .data-view-section {
+            display: none;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .view-btn {
+            padding: 0.75rem 1rem;
+            border: 2px solid #4299e1;
+            background: white;
+            color: #4299e1;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .view-btn.active,
+        .view-btn:hover {
+            background: #4299e1;
+            color: white;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .data-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .table-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-view {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #3182ce;
+        }
+
+        .btn-delete {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c53030;
+        }
+
+        /* Loading and Messages */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #718096;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.3rem;
+            }
+
+            .container {
+                padding: 0.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem 0.5rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .stat-label {
+                font-size: 0.8rem;
+            }
+
+            .section-content {
+                padding: 1rem;
+            }
+
+            .action-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .action-btn {
+                padding: 1rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .action-icon {
+                font-size: 1.2rem;
+            }
+
+            .class-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.75rem;
+            }
+
+            .class-btn {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .view-controls {
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .view-btn {
+                flex-shrink: 0;
+                padding: 0.6rem 0.8rem;
+                font-size: 0.8rem;
+            }
+
+            /* Mobile Table */
+            .data-table {
+                font-size: 0.8rem;
+            }
+
+            .data-table,
+            .data-table thead,
+            .data-table tbody,
+            .data-table th,
+            .data-table td,
+            .data-table tr {
+                display: block;
+            }
+
+            .data-table thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            .data-table tr {
+                background: white;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 1rem;
+                border-radius: 8px;
+                padding: 1rem;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .data-table td {
+                border: none;
+                position: relative;
+                padding: 0.5rem 0;
+                padding-left: 40%;
+                text-align: left;
+                white-space: normal;
+            }
+
+            .data-table td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 35%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+                color: #4a5568;
+                font-size: 0.8rem;
+            }
+
+            .table-btn {
+                margin: 0.25rem 0.25rem 0.25rem 0;
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .class-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Developer Footer */
+        .developer-footer {
+            background: linear-gradient(135deg, #2d3748, #4a5568);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4299e1, #48bb78);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-contact {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-item {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .footer-copyright {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .footer-contact {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <div>
+                    <h1>🎓 Admin Dashboard</h1>
+                    <div class="header-subtitle">Govt Girls Secondary School Nishtar Road Khi</div>
+                </div>
+            </div>
+            <div class="user-info">
+                <span>Welcome, Admin</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Statistics Section -->
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_students or 0 }}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_classes or 11 }}</div>
+                    <div class="stat-label">Total Classes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="active-users">1</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">⚡ Quick Actions</div>
+                <div class="section-subtitle">Manage student data efficiently</div>
+            </div>
+            <div class="section-content">
+                <div class="action-grid">
+                    <a href="{{ url_for('form') }}" class="action-btn">
+                        <div class="action-icon">➕</div>
+                        <div>Add New Student</div>
+                    </a>
+                    <button onclick="showAllData()" class="action-btn">
+                        <div class="action-icon">📊</div>
+                        <div>View All Data</div>
+                    </button>
+                    <button onclick="showClassWiseData()" class="action-btn">
+                        <div class="action-icon">📚</div>
+                        <div>Class-wise View</div>
+                    </button>
+                    <a href="{{ url_for('data_edit') }}" class="action-btn">
+                        <div class="action-icon">✏️</div>
+                        <div>Edit Data</div>
+                    </a>
+                    <a href="{{ url_for('reports') }}" class="action-btn">
+                        <div class="action-icon">📈</div>
+                        <div>Generate Reports</div>
+                    </a>
+                    <button onclick="consolidateData()" class="action-btn">
+                        <div class="action-icon">📋</div>
+                        <div>Consolidate Data</div>
+                    </button>
+                    <a href="{{ url_for('settings') }}" class="action-btn">
+                        <div class="action-icon">⚙️</div>
+                        <div>Settings</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Class Management Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">🏫 Class Management</div>
+                <div class="section-subtitle">Access individual class data</div>
+            </div>
+            <div class="section-content">
+                <div class="class-grid">
+                    <a href="{{ url_for('class_dashboard', class_name='ECE') }}" class="class-btn">ECE</a>
+                    <a href="{{ url_for('class_dashboard', class_name='I') }}" class="class-btn">Class I</a>
+                    <a href="{{ url_for('class_dashboard', class_name='II') }}" class="class-btn">Class II</a>
+                    <a href="{{ url_for('class_dashboard', class_name='III') }}" class="class-btn">Class III</a>
+                    <a href="{{ url_for('class_dashboard', class_name='IV') }}" class="class-btn">Class IV</a>
+                    <a href="{{ url_for('class_dashboard', class_name='V') }}" class="class-btn">Class V</a>
+                    <a href="{{ url_for('class_dashboard', class_name='VI') }}" class="class-btn">Class VI</a>
+                    <a href="{{ url_for('class_dashboard', class_name='VII') }}" class="class-btn">Class VII</a>
+                    <a href="{{ url_for('class_dashboard', class_name='VIII') }}" class="class-btn">Class VIII</a>
+                    <a href="{{ url_for('class_dashboard', class_name='IX') }}" class="class-btn">Class IX</a>
+                    <a href="{{ url_for('class_dashboard', class_name='X') }}" class="class-btn">Class X</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data View Section -->
+        <div class="section-card data-view-section" id="data-section">
+            <div class="section-header">
+                <div class="section-title">📋 Student Data</div>
+                <div class="section-subtitle">View and manage student information</div>
+            </div>
+            <div class="section-content">
+                <div class="view-controls">
+                    <button class="view-btn active" onclick="showAllData()">All Students</button>
+                    <button class="view-btn" onclick="showClassWiseData()">Class-wise</button>
+                    <button class="view-btn" onclick="filterByClass('ECE')">ECE</button>
+                    <button class="view-btn" onclick="filterByClass('I')">Class I</button>
+                    <button class="view-btn" onclick="filterByClass('II')">Class II</button>
+                    <button class="view-btn" onclick="filterByClass('III')">Class III</button>
+                    <button class="view-btn" onclick="filterByClass('IV')">Class IV</button>
+                    <button class="view-btn" onclick="filterByClass('V')">Class V</button>
+                </div>
+                <div id="data-content">
+                    <div class="loading">Loading data...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Footer -->
+    <div class="developer-footer">
+        <div class="footer-content">
+            <div class="footer-logo">MS</div>
+            <div class="footer-text">Developed by <strong>MasterSahub</strong></div>
+            <div class="footer-contact">
+                <div class="contact-item">📧 Contact for Custom Solutions</div>
+                <div class="contact-item">💻 Web Development Services</div>
+                <div class="contact-item">📱 Mobile App Development</div>
+                <div class="contact-item">🎓 Educational Software Solutions</div>
+            </div>
+            <div class="footer-copyright">
+                © 2025 MasterSahub. Empowering Education Through Technology.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show message function
+        function showMessage(message, type = 'error') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(messageDiv, container.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Show all data
+        function showAllData() {
+            document.getElementById('data-section').style.display = 'block';
+            document.getElementById('data-content').innerHTML = '<div class="loading">Loading all student data...</div>';
+            
+            // Smooth scroll to data section
+            const dataSection = document.querySelector('.data-view-section');
+            if (dataSection) {
+                dataSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            fetch('/api/all_students')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayStudentsTable(data.students);
+                    } else {
+                        document.getElementById('data-content').innerHTML = `<div class="error">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('data-content').innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+                });
+        }
+        
+        // Display students table
+        function displayStudentsTable(students) {
+            if (students.length === 0) {
+                document.getElementById('data-content').innerHTML = `
+                    <div style="text-align: center; padding: 3rem; background: rgba(255,255,255,0.95); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📊</div>
+                        <h3 style="color: #4a5568; margin-bottom: 0.5rem;">No Students Found</h3>
+                        <p style="color: #718096; margin: 0;">There are currently no students in the database.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let tableHTML = `
+                <div style="background: rgba(255,255,255,0.95); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
+                    <!-- Professional Header -->
+                    <div style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 1.5rem; text-align: center;">
+                        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 600;">📋 All Students Database</h2>
+                        <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">Complete student records overview</p>
+                    </div>
+                    
+                    <!-- Search and Filter Controls -->
+                    <div style="padding: 1.5rem; border-bottom: 1px solid #e2e8f0; background: #f7fafc;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: space-between;">
+                            <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 200px;">
+                                <div style="position: relative; flex: 1; max-width: 400px;">
+                                    <input type="text" id="studentSearch" placeholder="🔍 Search students by name, father's name, or GR#..." 
+                                           style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; transition: all 0.3s ease;"
+                                           onkeyup="filterStudents()" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'">
+                                </div>
+                                <select id="classFilter" onchange="filterStudents()" 
+                                        style="padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer;">
+                                    <option value="">All Classes</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="I">Class I</option>
+                                    <option value="II">Class II</option>
+                                    <option value="III">Class III</option>
+                                    <option value="IV">Class IV</option>
+                                    <option value="V">Class V</option>
+                                    <option value="VI">Class VI</option>
+                                    <option value="VII">Class VII</option>
+                                    <option value="VIII">Class VIII</option>
+                                    <option value="IX">Class IX</option>
+                                    <option value="X">Class X</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="background: #4299e1; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
+                                    📊 Total: <span id="studentCount">${students.length}</span> students
+                                </span>
+                                <button onclick="exportStudentData()" 
+                                        style="background: #48bb78; color: white; border: none; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.3s ease;"
+                                        onmouseover="this.style.background='#38a169'" onmouseout="this.style.background='#48bb78'">
+                                    📥 Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Professional Data Table -->
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="studentsTable" style="margin: 0; border-radius: 0;">
+                            <thead>
+                                <tr style="background: linear-gradient(135deg, #f7fafc, #edf2f7);">
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">S.No</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🆔 GR#</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👤 Student Name</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👨 Father's Name</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">⚧ Gender</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🕌 Religion</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📞 Contact</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🆔 CNIC/B-Form</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🎂 DOB</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👤 Guardian</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🏫 Class</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📚 Section</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10; text-align: center;">⚡ Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
+            students.forEach((student, index) => {
+                const rowClass = index % 2 === 0 ? 'even-row' : 'odd-row';
+                const genderIcon = student.gender === 'Male' ? '👦' : student.gender === 'Female' ? '👧' : '⚧';
+                const genderColor = student.gender === 'Male' ? '#3182ce' : student.gender === 'Female' ? '#e53e3e' : '#718096';
+                
+                // Safely convert to string and then to lowercase
+                const studentNameLower = String(student.student_name || '').toLowerCase();
+                const fatherNameLower = String(student.father_name || '').toLowerCase();
+                const grNumberLower = String(student.gr_number || '').toLowerCase();
+                
+                tableHTML += `
+                    <tr class="student-row ${rowClass}" data-student-name="${studentNameLower}" 
+                        data-father-name="${fatherNameLower}" 
+                        data-gr-number="${grNumberLower}" 
+                        data-class="${student.student_class}" 
+                        style="transition: all 0.3s ease; border-bottom: 1px solid #e2e8f0;"
+                        onmouseover="this.style.background='#f0f9ff'; this.style.transform='scale(1.01)'; this.style.boxShadow='0 2px 8px rgba(66,153,225,0.1)'"
+                        onmouseout="this.style.background='${index % 2 === 0 ? '#ffffff' : '#f9fafb'}'; this.style.transform='scale(1)'; this.style.boxShadow='none'">
+                        <td data-label="S.No" style="padding: 1rem 0.75rem; font-weight: 500; color: #4a5568;">${student.sno}</td>
+                        <td data-label="GR#" style="padding: 1rem 0.75rem; font-family: monospace; font-weight: 500; color: #2d3748;">${student.gr_number || 'N/A'}</td>
+                        <td data-label="Student Name" style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.2rem;">${genderIcon}</span>
+                                ${student.student_name || 'N/A'}
+                            </div>
+                        </td>
+                        <td data-label="Father's Name" style="padding: 1rem 0.75rem; color: #4a5568;">${student.father_name || 'N/A'}</td>
+                        <td data-label="Gender" style="padding: 1rem 0.75rem;">
+                            <span style="color: ${genderColor}; font-weight: 500;">${student.gender || 'N/A'}</span>
+                        </td>
+                        <td data-label="Religion" style="padding: 1rem 0.75rem; color: #4a5568;">${student.religion || 'N/A'}</td>
+                        <td data-label="Contact" style="padding: 1rem 0.75rem; font-family: monospace; color: #4a5568;">${student.contact_number || 'N/A'}</td>
+                        <td data-label="CNIC/B-Form" style="padding: 1rem 0.75rem; font-family: monospace; font-size: 0.85rem; color: #4a5568;">${student.cnic_bform || 'N/A'}</td>
+                        <td data-label="DOB" style="padding: 1rem 0.75rem; color: #4a5568;">${student.date_of_birth || 'N/A'}</td>
+                        <td data-label="Guardian" style="padding: 1rem 0.75rem; color: #4a5568;">
+                            <div style="font-size: 0.85rem;">
+                                <div style="font-weight: 500;">${student.guardian_name || 'N/A'}</div>
+                                <div style="color: #718096; font-size: 0.8rem;">${student.guardian_relation || ''}</div>
+                            </div>
+                        </td>
+                        <td data-label="Class" style="padding: 1rem 0.75rem;">
+                            <span style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                ${student.student_class}
+                            </span>
+                        </td>
+                        <td data-label="Section" style="padding: 1rem 0.75rem; color: #4a5568;">${student.class_section || 'N/A'}</td>
+                        <td data-label="Actions" style="padding: 1rem 0.75rem; text-align: center;">
+                            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                                <button onclick="viewStudent('${student.sheet_name}', ${student.row_number})" 
+                                        class="table-btn btn-view" 
+                                        style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.25rem;"
+                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(66,153,225,0.3)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    👁️ View
+                                </button>
+                                <button onclick="deleteStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
+                                        class="table-btn btn-delete" 
+                                        style="background: linear-gradient(135deg, #e53e3e, #c53030); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.25rem;"
+                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(229,62,62,0.3)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Professional Footer -->
+                    <div style="background: #f7fafc; padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+                        <p style="margin: 0; color: #718096; font-size: 0.85rem;">
+                            📊 Displaying <span id="visibleCount">${students.length}</span> of ${students.length} students | 
+                            🏫 Govt Girls Secondary School Nishtar Road Khi
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('data-content').innerHTML = tableHTML;
+        }
+
+        // Show class-wise data
+        function showClassWiseData() {
+            document.getElementById('data-section').style.display = 'block';
+            document.getElementById('data-content').innerHTML = '<div class="loading">Loading class-wise data...</div>';
+            
+            fetch('/api/class_wise_data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayClassWiseData(data.classes, data.summary);
+                    } else {
+                        document.getElementById('data-content').innerHTML = `<div class="error">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('data-content').innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+                });
+        }
+        
+        // Display class-wise data
+        function displayClassWiseData(classes, summary) {
+            let contentHTML = `
+                <div style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; text-align: center;">
+                    <h2 style="margin: 0 0 1rem 0;">📊 School Overview</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: bold;">${summary.total_students}</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Total Students</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: bold;">${summary.total_male}</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Male Students</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: bold;">${summary.total_female}</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Female Students</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            `;
+            
+            classes.forEach(classData => {
+                contentHTML += `
+                    <div style="background: #f7fafc; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #4299e1; transition: transform 0.2s; cursor: pointer;" 
+                         onclick="filterByClass('${classData.name}')" 
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" 
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <h3 style="color: #4299e1; margin-bottom: 1rem; display: flex; align-items: center; font-size: 1.1rem;">
+                            <span style="margin-right: 0.5rem;">${classData.name === 'ECE' ? '🎨' : '📚'}</span>
+                            ${classData.name === 'ECE' ? 'ECE Class' : `Class ${classData.name}`}
+                        </h3>
+                        <div style="margin-bottom: 1rem;">
+                            <p style="margin: 0; font-size: 0.95rem;">Total Students: <strong style="color: #2d3748;">${classData.total_students}</strong></p>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                            <p style="margin: 0;">👦 Boys: <strong style="color: #3182ce;">${classData.male_students}</strong></p>
+                            <p style="margin: 0;">👧 Girls: <strong style="color: #e53e3e;">${classData.female_students}</strong></p>
+                        </div>
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; text-align: center;">
+                            <small style="color: #718096;">Click to view class details</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += '</div>';
+            document.getElementById('data-content').innerHTML = contentHTML;
+        }
+
+        // Filter by class
+        function filterByClass(className) {
+            document.getElementById('data-section').style.display = 'block';
+            document.getElementById('data-content').innerHTML = `<div class="loading">Loading ${className} class data...</div>`;
+            
+            fetch(`/api/class_data/${className}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayClassStudentsTable(data.students, className);
+                    } else {
+                        document.getElementById('data-content').innerHTML = `<div class="error">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('data-content').innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+                });
+        }
+        
+        // Display class students table
+        function displayClassStudentsTable(students, className) {
+            let tableHTML = `<h3 style="margin-bottom: 1rem; color: #4a5568;">Class ${className} Students (${students.length} total)</h3>`;
+            
+            if (students.length === 0) {
+                tableHTML += `<div class="loading">No students found in ${className} class</div>`;
+            } else {
+                tableHTML += `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Class S.No</th>
+                                <th>Student Name</th>
+                                <th>Father's Name</th>
+                                <th>Section</th>
+                                <th>GR#</th>
+                                <th>Gender</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                students.forEach(student => {
+                    tableHTML += `
+                        <tr>
+                            <td data-label="Class S.No">${student.class_sno || 'N/A'}</td>
+                            <td data-label="Student Name">${student.student_name || 'N/A'}</td>
+                            <td data-label="Father's Name">${student.father_name || 'N/A'}</td>
+                            <td data-label="Section">${student.class_section || 'N/A'}</td>
+                            <td data-label="GR#">${student.gr_number || 'N/A'}</td>
+                            <td data-label="Gender">${student.gender || 'N/A'}</td>
+                            <td data-label="Actions">
+                                <button onclick="viewStudent('Class_${className}', ${student.row_number})" class="table-btn btn-view">View</button>
+                                <button onclick="deleteStudent('Class_${className}', ${student.row_number}, '${student.student_name}')" class="table-btn btn-delete">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+            document.getElementById('data-content').innerHTML = tableHTML;
+        }
+
+        // View student
+        function viewStudent(sheetName, rowNumber) {
+            window.open(`/student_details?sheet=${sheetName}&row=${rowNumber}`, '_blank');
+        }
+
+        // Delete student
+        function deleteStudent(sheetName, rowNumber, studentName) {
+            if (confirm(`Are you sure you want to delete student "${studentName}"?\n\nThis action cannot be undone and will permanently remove the student from the Excel file.`)) {
+                const deleteButtons = document.querySelectorAll('button[onclick*="deleteStudent"]');
+                deleteButtons.forEach(btn => {
+                    if (btn.onclick.toString().includes(`${rowNumber}`)) {
+                        btn.disabled = true;
+                        btn.textContent = 'Deleting...';
+                    }
+                });
+                
+                fetch(`/api/delete_student/${sheetName}/${rowNumber}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        showAllData(); // Refresh the data
+                    } else {
+                        showMessage('Error: ' + data.message);
+                        deleteButtons.forEach(btn => {
+                            if (btn.onclick.toString().includes(`${rowNumber}`)) {
+                                btn.disabled = false;
+                                btn.textContent = 'Delete';
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error deleting student: ' + error.message);
+                    deleteButtons.forEach(btn => {
+                        if (btn.onclick.toString().includes(`${rowNumber}`)) {
+                            btn.disabled = false;
+                            btn.textContent = 'Delete';
+                        }
+                    });
+                });
+            }
+        }
+
+        // Filter students function
+        function filterStudents() {
+            const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
+            const classFilter = document.getElementById('classFilter').value;
+            const rows = document.querySelectorAll('.student-row');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const studentName = row.getAttribute('data-student-name');
+                const fatherName = row.getAttribute('data-father-name');
+                const grNumber = row.getAttribute('data-gr-number');
+                const studentClass = row.getAttribute('data-class');
+                
+                const matchesSearch = !searchTerm || 
+                    studentName.includes(searchTerm) || 
+                    fatherName.includes(searchTerm) || 
+                    grNumber.includes(searchTerm);
+                    
+                const matchesClass = !classFilter || studentClass === classFilter;
+                
+                if (matchesSearch && matchesClass) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Update visible count
+            const visibleCountElement = document.getElementById('visibleCount');
+            if (visibleCountElement) {
+                visibleCountElement.textContent = visibleCount;
+            }
+        }
+
+        // Export student data function
+        function exportStudentData() {
+            showMessage('Export functionality will be implemented soon!', 'success');
+        }
+
+        // Consolidate data function
+        function consolidateData() {
+            if (confirm('This will consolidate all student data from all classes into a single Excel file (408070227.xlsx). Do you want to proceed?')) {
+                showMessage('Starting data consolidation...', 'info');
+                
+                fetch('/api/consolidate_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Check if response is actually a file (Excel)
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('spreadsheetml')) {
+                            return response.blob();
+                        } else {
+                            throw new Error('Invalid response format');
+                        }
+                    } else if (response.status === 302 || response.status === 401) {
+                        throw new Error('Authentication required. Please login as admin.');
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Consolidation failed');
+                        });
+                    }
+                })
+                .then(blob => {
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = '408070227.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showMessage('Data consolidated successfully! File downloaded.', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage(error.message || 'Error consolidating data. Please try again.', 'error');
+                });
+            }
+        }
+
+        // Update active button
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('view-btn')) {
+                document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>
