@@ -15,7 +15,7 @@ import tempfile
 import shutil
 
 app = Flask(__name__)
-app.secret_key = 'student_data_entry_2025_admin_panel'
+app.secret_key = os.environ.get('SECRET_KEY', 'student_data_entry_2025_admin_panel')
 
 # User credentials and roles
 USERS = {
@@ -161,7 +161,8 @@ def submit_data():
             'Student Class': form_data.get('student_class', ''),
             'Class Section': '',  # Will be set based on gender
             'SEMIS Code': '408070227',  # Auto-set
-            'Date of Admission': form_data.get('date_of_admission', 'N/A')
+            'Date of Admission': form_data.get('date_of_admission', 'N/A'),
+            'Remarks': 'N/A'  # Admin-only field, set after admission
         }
         
         # Handle guardian selection
@@ -983,11 +984,14 @@ if __name__ == '__main__':
     if not os.path.exists('templates'):
         os.makedirs('templates')
     
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
     print("Starting Student Data Entry Web Server...")
-    print("Access from mobile: http://YOUR_PC_IP:5000")
-    print("Access locally: http://localhost:5000")
+    print(f"Access from mobile: http://YOUR_PC_IP:{port}")
+    print(f"Access locally: http://localhost:{port}")
     print("\nDefault login credentials:")
     print("Admin: admin/admin")
     print("Class teachers: class1/class1, class2/class2, etc.")
     print("ECE teacher: ece/ece")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug)

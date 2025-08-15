@@ -826,6 +826,7 @@
                                     <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👤 Guardian</th>
                                     <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🏫 Class</th>
                                     <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📚 Section</th>
+                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📝 Remarks</th>
                                     <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10; text-align: center;">⚡ Actions</th>
                                 </tr>
                             </thead>
@@ -878,6 +879,7 @@
                             </span>
                         </td>
                         <td data-label="Section" style="padding: 1rem 0.75rem; color: #4a5568;">${student.class_section || 'N/A'}</td>
+                        <td data-label="Remarks" style="padding: 1rem 0.75rem; color: #4a5568; font-style: italic;">${student.remarks || 'N/A'}</td>
                         <td data-label="Actions" style="padding: 1rem 0.75rem; text-align: center;">
                             <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
                                 <button onclick="viewStudent('${student.sheet_name}', ${student.row_number})" 

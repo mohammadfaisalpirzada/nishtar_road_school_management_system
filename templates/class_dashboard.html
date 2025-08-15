@@ -424,12 +424,13 @@
                             <th>Father Name</th>
                             <th>Section</th>
                             <th>GR#</th>
+                            <th>Remarks</th>
                             <th>Edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="6" style="text-align: center; color: #666; padding: 2rem;">No students found in Class {{ class_name }}</td>
+                            <td colspan="7" style="text-align: center; color: #666; padding: 2rem;">No students found in Class {{ class_name }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -497,7 +498,7 @@
                         if (data.students.length === 0) {
                             tableHTML += `
                                 <tr>
-                                    <td colspan="6" style="text-align: center; color: #666; padding: 2rem;">No students found in Class ${className}</td>
+                                    <td colspan="7" style="text-align: center; color: #666; padding: 2rem;">No students found in Class ${className}</td>
                                 </tr>
                             `;
                         } else {
@@ -510,6 +511,7 @@
                                         <td data-label="Father Name">${student.father_name || ''}</td>
                                         <td data-label="Section"><span class="section-badge ${sectionClass}">${student.class_section || ''}</span></td>
                                         <td data-label="GR#">${student.gr_number || ''}</td>
+                                        <td data-label="Remarks" style="font-style: italic;">${student.remarks || 'N/A'}</td>
                                         <td data-label="Actions">
                                             <button onclick="viewStudent('Class_${className}', ${student.row_number})" style="background: #007bff; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">View</button>
                                             <button onclick="editStudent('${student.sno}')" style="background: #28a745; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">Edit</button>
@@ -562,7 +564,7 @@
                         if (data.students.length === 0) {
                             tableHTML += `
                                 <tr>
-                                    <td colspan="6" style="text-align: center; color: #666; padding: 2rem;">No students found in ${section} section</td>
+                                    <td colspan="7" style="text-align: center; color: #666; padding: 2rem;">No students found in ${section} section</td>
                                 </tr>
                             `;
                         } else {
@@ -574,6 +576,7 @@
                                         <td data-label="Father Name">${student.father_name || ''}</td>
                                         <td data-label="Section"><span class="section-badge ${sectionClass}">${student.class_section || ''}</span></td>
                                         <td data-label="GR#">${student.gr_number || ''}</td>
+                                        <td data-label="Remarks" style="font-style: italic;">${student.remarks || 'N/A'}</td>
                                         <td data-label="Actions">
                                             <button onclick="viewStudent('Class_${className}', ${student.row_number})" style="background: #007bff; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">View</button>
                                             <button onclick="editStudent('${student.sno}')" style="background: #28a745; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">Edit</button>
@@ -627,7 +630,7 @@
                         if (data.students.length === 0) {
                             tableHTML += `
                                 <tr>
-                                    <td colspan="6" style="text-align: center; color: #666; padding: 2rem;">No ${displayGender.toLowerCase()} students found</td>
+                                    <td colspan="7" style="text-align: center; color: #666; padding: 2rem;">No ${displayGender.toLowerCase()} students found</td>
                                 </tr>
                             `;
                         } else {
@@ -640,6 +643,7 @@
                                         <td data-label="Father Name">${student.father_name || ''}</td>
                                         <td data-label="Section"><span class="section-badge ${sectionClass}">${student.class_section || ''}</span></td>
                                         <td data-label="GR#">${student.gr_number || ''}</td>
+                                        <td data-label="Remarks" style="font-style: italic;">${student.remarks || 'N/A'}</td>
                                         <td data-label="Actions">
                                             <button onclick="viewStudent('Class_${className}', ${student.row_number})" style="background: #007bff; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">View</button>
                                             <button onclick="editStudent('${student.sno}')" style="background: #28a745; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">Edit</button>

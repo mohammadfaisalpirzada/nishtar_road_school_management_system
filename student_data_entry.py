@@ -31,7 +31,8 @@ class StudentDataEntry:
             "Student Class",
             "Class Section",
             "SEMIS Code",
-            "Date of Admission"
+            "Date of Admission",
+            "Remarks"
         ]
         self.setup_excel_file()
     
@@ -404,11 +405,13 @@ class StudentDataEntry:
                     print("(e.g., +92-300-1234567)", end=" ")
                 elif header in ["CNIC / B-Form", "Father/Mother's CNIC", "Guardian CNIC"]:
                     print("(e.g., 12345-6789012-3)", end=" ")
+                elif header == "Remarks":
+                    print("(TC=Transfer Certificate, N=New Admission, F=Failed, or custom text)", end=" ")
                 
                 value = input().strip()
                 
                 # Allow empty for optional fields with N/A default
-                optional_fields = ["Guardian Name", "Guardian CNIC", "Guardian Relation", "Contact Number", "CNIC / B-Form", "Date of Birth", "Father/Mother's CNIC", "Date of Admission"]
+                optional_fields = ["Guardian Name", "Guardian CNIC", "Guardian Relation", "Contact Number", "CNIC / B-Form", "Date of Birth", "Father/Mother's CNIC", "Date of Admission", "Remarks"]
                 if not value and header in optional_fields:
                     student_data[header] = "N/A"
                     break
