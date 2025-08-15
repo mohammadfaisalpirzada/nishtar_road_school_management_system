@@ -359,9 +359,12 @@
 </head>
 <body>
     <div class="header">
-        <div>
-            <h1>📚 Class {{ class_name }} Dashboard</h1>
-            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Govt Girls Secondary School Nishtar Road Khi</p>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="School Logo" style="width: 50px; height: 50px; object-fit: contain;" onerror="this.style.display='none'">
+            <div>
+                <h1>📚 Class {{ class_name }} Dashboard</h1>
+                <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Govt Girls Secondary School Nishtar Road Khi</p>
+            </div>
         </div>
         <div class="user-info">
             <span>{% if user_role == 'admin' %}Admin Access{% else %}Teacher Access{% endif %}</span>
@@ -688,11 +691,11 @@
         }
 
         function viewStudent(sheetName, rowNumber) {
-            // Open student details in the same tab - use teacher route for teachers, admin route for admins
+            // Open student details in new tab - use teacher route for teachers, admin route for admins
             const url = userRole === 'admin' 
                 ? `/student_details?sheet=${encodeURIComponent(sheetName)}&row=${rowNumber}`
                 : `/teacher_student_details?sheet=${encodeURIComponent(sheetName)}&row=${rowNumber}`;
-            window.location.href = url;
+            window.open(url, '_blank');
         }
 
         function deleteStudent(sheetName, rowNumber, studentName) {
@@ -701,7 +704,7 @@
                 const deleteButtons = document.querySelectorAll(`button[onclick*="deleteStudent('${sheetName}', ${rowNumber}"]`);
                 deleteButtons.forEach(btn => {
                     btn.disabled = true;
-                    btn.textContent = 'Deleting...';
+                    btn.innerHTML = '🗑️ Deleting...';
                 });
 
                 fetch(`/api/delete_student/${encodeURIComponent(sheetName)}/${rowNumber}`, {
@@ -718,7 +721,7 @@
                         // Restore button state on error
                         deleteButtons.forEach(btn => {
                             btn.disabled = false;
-                            btn.textContent = 'Delete';
+                            btn.innerHTML = '🗑️ Delete';
                         });
                     }
                 })
@@ -727,7 +730,7 @@
                     // Restore button state on error
                     deleteButtons.forEach(btn => {
                         btn.disabled = false;
-                        btn.textContent = 'Delete';
+                        btn.innerHTML = '🗑️ Delete';
                     });
                 });
             }

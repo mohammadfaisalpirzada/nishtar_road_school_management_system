@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Details - {{ student.get('Student Name', 'Unknown') }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            color: #000;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        
+        .school-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+            display: block;
+        }
+        
+        .school-name {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .school-address {
+            font-size: 10pt;
+            margin-bottom: 5px;
+        }
+        
+        .document-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            text-decoration: underline;
+        }
+        
+        .student-photo {
+            width: 120px;
+            height: 150px;
+            border: 2px solid #000;
+            float: right;
+            margin: 0 0 20px 20px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24pt;
+        }
+        
+        .info-section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            min-width: 120px;
+            margin-right: 10px;
+        }
+        
+        .info-value {
+            flex: 1;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .signature-box {
+            text-align: center;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            margin-top: 30px;
+        }
+        
+        .signature-line {
+            width: 150px;
+            height: 1px;
+            background: #000;
+            margin: 20px auto 5px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .print-date {
+            text-align: right;
+            margin-bottom: 20px;
+            font-size: 10pt;
+        }
+        
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        @media screen {
+            body {
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }
+            
+            .print-page {
+                background: white;
+                padding: 20px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-page">
+        <!-- Header -->
+        <div class="header">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="School Logo" class="school-logo" onerror="this.style.display='none'">
+            <div class="school-name">Govt Girls Secondary School</div>
+            <div class="school-address">Nishtar Road, Karachi</div>
+            <div style="font-size: 10pt; margin-top: 5px;">Student Information Card</div>
+        </div>
+        
+        <!-- Print Date -->
+        <div class="print-date">
+            Printed on: {{ moment().format('DD/MM/YYYY HH:mm') }}
+        </div>
+        
+        <!-- Document Title -->
+        <div class="document-title">STUDENT DETAILS</div>
+        
+        <!-- Student Photo Placeholder -->
+        <div class="student-photo">
+            {% if student.get('Gender') == 'Male' %}
+                👦
+            {% elif student.get('Gender') == 'Female' %}
+                👧
+            {% else %}
+                👤
+            {% endif %}
+        </div>
+        
+        <!-- Personal Information -->
+        <div class="info-section">
+            <div class="section-title">PERSONAL INFORMATION</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Full Name:</span>
+                    <span class="info-value">{{ student.get('Student Name', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Father's Name:</span>
+                    <span class="info-value">{{ student.get("Father's Name", 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Gender:</span>
+                    <span class="info-value">{{ student.get('Gender', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Date of Birth:</span>
+                    <span class="info-value">{{ student.get('Date of Birth', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Religion:</span>
+                    <span class="info-value">{{ student.get('Religion', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">CNIC/B-Form:</span>
+                    <span class="info-value">{{ student.get('CNIC / B-Form', 'N/A') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Academic Information -->
+        <div class="info-section">
+            <div class="section-title">ACADEMIC INFORMATION</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Class:</span>
+                    <span class="info-value">{{ student.get('Student Class', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Section:</span>
+                    <span class="info-value">{{ student.get('Class Section', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">GR Number:</span>
+                    <span class="info-value">{{ student.get('GR#', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Class S.No:</span>
+                    <span class="info-value">{{ student.get('Class_S.No', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">SEMIS Code:</span>
+                    <span class="info-value">{{ student.get('SEMIS Code', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Admission Date:</span>
+                    <span class="info-value">{{ student.get('Date of Admission', 'N/A') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="info-section">
+            <div class="section-title">CONTACT INFORMATION</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Contact Number:</span>
+                    <span class="info-value">{{ student.get('Contact Number', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Parent CNIC:</span>
+                    <span class="info-value">{{ student.get("Father/Mother's CNIC", 'N/A') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Guardian Information -->
+        <div class="info-section">
+            <div class="section-title">GUARDIAN INFORMATION</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Guardian Name:</span>
+                    <span class="info-value">{{ student.get('Guardian Name', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Guardian CNIC:</span>
+                    <span class="info-value">{{ student.get('Guardian CNIC', 'N/A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Relation:</span>
+                    <span class="info-value">{{ student.get('Guardian Relation', 'N/A') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Remarks -->
+        {% if student.get('Remarks') %}
+        <div class="info-section">
+            <div class="section-title">REMARKS</div>
+            <div class="info-item full-width">
+                <span class="info-value">{{ student.get('Remarks', 'No remarks') }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Class Teacher</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Principal</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Parent/Guardian</div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>This document is computer generated and does not require a physical signature.</p>
+            <p>Generated by Student Data Management System - Developed by MasterSahub</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print when page loads
+        window.onload = function() {
+            if (window.location.search.includes('autoprint=true')) {
+                window.print();
+            }
+        };
+        
+        // Add current date
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
+            const dateElement = document.querySelector('.print-date');
+            if (dateElement) {
+                dateElement.innerHTML = 'Printed on: ' + dateStr;
+            }
+        });
+    </script>
+</body>
+</html>

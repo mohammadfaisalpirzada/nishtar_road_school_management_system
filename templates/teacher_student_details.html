@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Details - Student Data Management</title>
+    <title>Student Details - {{ student.get('Student Name', 'Unknown') }}</title>
     <style>
         * {
             margin: 0;
@@ -13,617 +13,256 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #8B0000 0%, #4169E1 100%);
             min-height: 100vh;
+            color: #333;
         }
 
         .header {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .school-info {
-            text-align: center;
-            flex-grow: 1;
-        }
-
-        .school-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 0.2rem;
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
-            margin: 0.5rem 0;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .back-btn {
-            background: rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, #8B0000, #4169E1);
             color: white;
             border: none;
             padding: 0.5rem 1rem;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             text-decoration: none;
-            transition: background 0.3s ease;
-        }
-
-        .back-btn:hover {
-            background: rgba(255,255,255,0.3);
+            font-weight: 500;
         }
 
         .container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
         }
 
         .student-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
         }
 
         .student-header {
+            background: linear-gradient(135deg, #8B0000, #4169E1);
+            color: white;
+            padding: 2rem;
             text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #667eea;
         }
 
         .student-name {
             font-size: 2rem;
-            color: #333;
+            font-weight: 700;
             margin-bottom: 0.5rem;
         }
 
         .student-class {
-            font-size: 1.2rem;
-            color: #667eea;
-            font-weight: 500;
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-bottom: 2rem;
+        .student-content {
+            padding: 2rem;
         }
 
-        .navigation-container {
-            position: relative;
-            width: 100%;
-        }
-
-        .nav-arrow {
-            position: fixed;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(102, 126, 234, 0.9);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .nav-arrow:hover {
-            background: rgba(102, 126, 234, 1);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .nav-arrow:disabled {
-            background: rgba(108, 117, 125, 0.5);
-            cursor: not-allowed;
-            transform: translateY(-50%);
-        }
-
-        .nav-arrow.prev {
-            left: 20px;
-        }
-
-        .nav-arrow.next {
-            right: 20px;
-        }
-
-        /* Mobile styles */
-        @media (max-width: 768px) {
-            .nav-arrow {
-                display: none; /* Hide arrows on mobile, only swipe gestures */
-            }
-        }
-            
-            .student-card {
-                touch-action: pan-y;
-                user-select: none;
-            }
-        }
-
-        .edit-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 500;
-            transition: transform 0.2s ease;
-        }
-
-        .edit-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .details-grid {
+        .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
-        .detail-section {
+        .info-section {
             background: #f8f9fa;
             padding: 1.5rem;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-radius: 12px;
+            border-left: 4px solid #4169E1;
         }
 
         .section-title {
             font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 1rem;
             font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
         }
 
-        .detail-item {
+        .info-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e9ecef;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .detail-item:last-child {
-            margin-bottom: 0;
+        .info-item:last-child {
             border-bottom: none;
         }
 
-        .detail-label {
-            font-weight: 500;
-            color: #555;
-            flex: 1;
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
         }
 
-        .detail-value {
-            color: #333;
-            flex: 1;
+        .info-value {
+            color: #2d3748;
             text-align: right;
         }
 
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: white;
-        }
-
-        .error {
-            background: rgba(248, 215, 218, 0.9);
-            color: #721c24;
+        .teacher-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
             padding: 1rem;
-            border-radius: 5px;
+            border-radius: 8px;
             margin-bottom: 1rem;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* Developer Footer */
-        .developer-footer {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 2rem 0;
-            margin-top: 3rem;
             text-align: center;
         }
 
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
+        .actions-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            text-align: center;
         }
 
-        .footer-logo {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #4169E1, #8B0000);
             color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
         }
 
-        .footer-text {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .footer-contact {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2rem;
-            justify-content: center;
-            margin: 1rem 0;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .footer-copyright {
-            font-size: 0.8rem;
-            opacity: 0.8;
-            margin-top: 1rem;
+        .btn-print {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 0 1rem;
-            }
-            
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .student-name {
-                font-size: 1.5rem;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .footer-contact {
+            .header-content {
                 flex-direction: column;
                 gap: 1rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .info-value {
+                text-align: left;
             }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <button onclick="goBack()" class="back-btn">← Back to Dashboard</button>
-        <div class="school-info">
-            <div class="school-name">Govt Girls Secondary School Nishtar Road Khi</div>
-            <h1>📋 Student Details</h1>
-        </div>
-        <div style="width: 80px;"></div> <!-- Spacer for centering -->
-    </div>
-
-    <!-- Navigation Arrows -->
-    <button id="prevBtn" class="nav-arrow prev" onclick="navigateStudent('prev')" title="Previous Student">
-        ←
-    </button>
-    <button id="nextBtn" class="nav-arrow next" onclick="navigateStudent('next')" title="Next Student">
-        →
-    </button>
-
-    <div class="navigation-container">
-        <div class="container">
-            <div id="loading" class="loading">
-                <p>Loading student details...</p>
-            </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
-        
-        <div id="student-details" class="student-card" style="display: none;">
-            <!-- Student details will be loaded here -->
-        </div>
+        <div class="header-content">
+            <h1>👤 Student Details (Teacher View)</h1>
+            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
         </div>
     </div>
 
-    <!-- Developer Footer -->
-    <div class="developer-footer">
-        <div class="footer-content">
-            <div class="footer-logo">MS</div>
-            <div class="footer-text">Developed by <strong>MasterSahub</strong></div>
-            <div class="footer-contact">
-                <div class="contact-item">📧 Contact for Custom Solutions</div>
-                <div class="contact-item">💻 Web Development Services</div>
-                <div class="contact-item">📱 Mobile App Development</div>
-                <div class="contact-item">🎓 Educational Software Solutions</div>
+    <div class="container">
+        <div class="teacher-notice">
+            🔒 <strong>Teacher Access:</strong> You can view and edit student details, but cannot delete students.
+        </div>
+
+        <div class="student-card">
+            <div class="student-header">
+                <div class="student-name">{{ student.get('Student Name', 'Unknown Student') }}</div>
+                <div class="student-class">Class {{ student.get('Student Class', 'N/A') }} - {{ student.get('Class Section', 'N/A') }}</div>
             </div>
-            <div class="footer-copyright">
-                © 2025 MasterSahub. Empowering Education Through Technology.
+
+            <div class="student-content">
+                <div class="info-grid">
+                    <div class="info-section">
+                        <div class="section-title">👤 Personal Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Full Name:</span>
+                            <span class="info-value">{{ student.get('Student Name', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Father's Name:</span>
+                            <span class="info-value">{{ student.get("Father's Name", 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Gender:</span>
+                            <span class="info-value">{{ student.get('Gender', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">GR Number:</span>
+                            <span class="info-value">{{ student.get('GR#', 'N/A') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="section-title">📚 Academic Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Class:</span>
+                            <span class="info-value">{{ student.get('Student Class', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Section:</span>
+                            <span class="info-value">{{ student.get('Class Section', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Class S.No:</span>
+                            <span class="info-value">{{ student.get('Class_S.No', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Contact Number:</span>
+                            <span class="info-value">{{ student.get('Contact Number', 'N/A') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if student.get('Remarks') %}
+                <div class="info-section" style="margin-top: 1rem;">
+                    <div class="section-title">📝 Remarks</div>
+                    <div style="padding: 1rem; background: #fff3cd; border-radius: 8px;">
+                        {{ student.get('Remarks', 'No remarks') }}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
+
+        <div class="actions-section">
+            <a href="/teacher_student_edit?sheet={{ sheet_name }}&row={{ row_number }}" class="action-btn btn-edit">
+                ✏️ Edit Student
+            </a>
+            <button onclick="window.print()" class="action-btn btn-print">
+                🖨️ Print Details
+            </button>
+        </div>
     </div>
-
-    <script>
-        let currentStudentList = [];
-        let currentStudentIndex = -1;
-        let currentSheetName = '';
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        function goBack() {
-            // Extract class name from current sheet name to redirect to class dashboard
-            const urlParams = new URLSearchParams(window.location.search);
-            const sheetName = urlParams.get('sheet');
-            
-            if (sheetName && sheetName.startsWith('Class_')) {
-                const className = sheetName.replace('Class_', '');
-                window.location.href = `/class_dashboard/${className}`;
-            } else {
-                // Fallback to general dashboard
-                window.location.href = '/dashboard';
-            }
-        }
-
-        function navigateStudent(direction) {
-            if (currentStudentList.length === 0) return;
-            
-            let newIndex = currentStudentIndex;
-            if (direction === 'prev' && currentStudentIndex > 0) {
-                newIndex = currentStudentIndex - 1;
-            } else if (direction === 'next' && currentStudentIndex < currentStudentList.length - 1) {
-                newIndex = currentStudentIndex + 1;
-            }
-            
-            if (newIndex !== currentStudentIndex) {
-                const student = currentStudentList[newIndex];
-                window.location.href = `/teacher_student_details?sheet=${encodeURIComponent(currentSheetName)}&row=${student.row_number}`;
-            }
-        }
-
-        function updateNavigationButtons() {
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            
-            if (prevBtn && nextBtn) {
-                prevBtn.disabled = currentStudentIndex <= 0;
-                nextBtn.disabled = currentStudentIndex >= currentStudentList.length - 1;
-            }
-        }
-
-        function loadStudentList() {
-            const urlParams = new URLSearchParams(window.location.search);
-            currentSheetName = urlParams.get('sheet');
-            const currentRowNumber = parseInt(urlParams.get('row'));
-            
-            if (!currentSheetName) return;
-            
-            // Extract class name from sheet name (e.g., "Class_I" -> "I")
-            const className = currentSheetName.replace('Class_', '');
-            
-            // Fetch all students in the class
-            fetch(`/api/class_data/${className}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        currentStudentList = data.students;
-                        // Find current student index
-                        currentStudentIndex = currentStudentList.findIndex(student => student.row_number === currentRowNumber);
-                        updateNavigationButtons();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading student list:', error);
-                });
-        }
-
-        // Touch/Swipe functionality for mobile
-        function handleTouchStart(e) {
-            touchStartX = e.changedTouches[0].screenX;
-        }
-
-        function handleTouchEnd(e) {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }
-
-        function handleSwipe() {
-            const swipeThreshold = 50; // Minimum distance for a swipe
-            const swipeDistance = touchEndX - touchStartX;
-            
-            if (Math.abs(swipeDistance) > swipeThreshold) {
-                if (swipeDistance > 0) {
-                    // Swipe right - show previous student
-                    navigateStudent('prev');
-                } else {
-                    // Swipe left - show next student
-                    navigateStudent('next');
-                }
-            }
-        }
-
-        function loadStudentDetails() {
-            // Get URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const sheetName = urlParams.get('sheet');
-            const rowNumber = urlParams.get('row');
-            
-            if (!sheetName || !rowNumber) {
-                showError('Invalid student parameters');
-                return;
-            }
-            
-            // Fetch student details using teacher API
-            fetch(`/api/teacher_student_details/${sheetName}/${rowNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayStudentDetails(data.student, sheetName, rowNumber);
-                    } else {
-                        showError(data.message || 'Failed to load student details');
-                    }
-                })
-                .catch(error => {
-                    showError('Error loading student details: ' + error.message);
-                });
-        }
-
-        function displayStudentDetails(student, sheetName, rowNumber) {
-            document.getElementById('loading').style.display = 'none';
-            
-            const detailsContainer = document.getElementById('student-details');
-            detailsContainer.style.display = 'block';
-            
-            detailsContainer.innerHTML = `
-                <div class="student-header">
-                    <div class="student-name">${student['Student Name'] || 'N/A'}</div>
-                    <div class="student-class">Class ${student['Student Class'] || 'N/A'} - ${student['Class Section'] || 'N/A'} Section</div>
-                </div>
-                
-                <div class="details-grid">
-                    <div class="detail-section">
-                        <div class="section-title">Basic Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Class S.No:</span>
-                            <span class="detail-value">${student['Class_S.No'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">GR Number:</span>
-                            <span class="detail-value">${student['GR#'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gender:</span>
-                            <span class="detail-value">${student['Gender'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Date of Birth:</span>
-                            <span class="detail-value">${student['Date of Birth'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Religion:</span>
-                            <span class="detail-value">${student['Religion'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Family Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Father's Name:</span>
-                            <span class="detail-value">${student["Father's Name"] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Contact Number:</span>
-                            <span class="detail-value">${student['Contact Number'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Father/Mother's CNIC:</span>
-                            <span class="detail-value">${student["Father/Mother's CNIC"] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian Name:</span>
-                            <span class="detail-value">${student['Guardian Name'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian CNIC:</span>
-                            <span class="detail-value">${student['Guardian CNIC'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian Relation:</span>
-                            <span class="detail-value">${student['Guardian Relation'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Academic Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Student Class:</span>
-                            <span class="detail-value">${student['Student Class'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Class Section:</span>
-                            <span class="detail-value">${student['Class Section'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">SEMIS Code:</span>
-                            <span class="detail-value">${student['SEMIS Code'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Date of Admission:</span>
-                            <span class="detail-value">${student['Date of Admission'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Documents</div>
-                        <div class="detail-item">
-                            <span class="detail-label">CNIC / B-Form:</span>
-                            <span class="detail-value">${student['CNIC / B-Form'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Admin Remarks</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Remarks:</span>
-                            <span class="detail-value" style="font-style: italic;">${student['Remarks'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="action-buttons">
-                    <a href="/teacher_student_edit?sheet=${sheetName}&row=${rowNumber}" class="edit-btn">✏️ Edit Student Details</a>
-                </div>
-            `;
-        }
-
-        function showError(message) {
-            document.getElementById('loading').style.display = 'none';
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-
-        // Load student details when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadStudentDetails();
-            loadStudentList();
-            
-            // Add touch event listeners for swipe functionality
-            const navigationContainer = document.querySelector('.navigation-container');
-            if (navigationContainer) {
-                navigationContainer.addEventListener('touchstart', handleTouchStart, false);
-                navigationContainer.addEventListener('touchend', handleTouchEnd, false);
-            }
-            
-            // Add keyboard navigation (optional)
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowLeft') {
-                    navigateStudent('prev');
-                } else if (e.key === 'ArrowRight') {
-                    navigateStudent('next');
-                }
-            });
-        });
-    </script>
 </body>
 </html>

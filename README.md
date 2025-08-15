@@ -1,17 +1,20 @@
 # Student Data Entry System
 
-A comprehensive student data management system with both web and command-line interfaces for adding student data to Excel files with class-wise organization.
+A comprehensive student data management system with both web and command-line interfaces for adding student data to Excel files or Google Sheets with class-wise organization.
 
 ## Features
 
 - **Web Interface**: Modern, mobile-friendly web dashboard with navigation
 - **CLI Interface**: User-friendly command-line interface for data entry
-- **Class-wise Organization**: Automatic organization of students into class-specific Excel sheets
+- **Class-wise Organization**: Automatic organization of students into class-specific sheets
 - **Data Validation**: Built-in validation for phone numbers, CNIC format, dates, and gender
 - **Unified Serial Numbers**: Sequential S.No across all classes for simplified tracking
-- **Excel Integration**: Works directly with Excel files using openpyxl
+- **Dual Storage Options**: 
+  - **Excel Integration**: Works directly with Excel files using openpyxl
+  - **Google Sheets Integration**: Cloud-based storage with real-time collaboration
 - **Error Handling**: Comprehensive error handling and user feedback
 - **Dashboard Statistics**: Real-time statistics and quick navigation
+- **Cloud Deployment Ready**: Optimized for Railway deployment with persistent data storage
 
 ## Student Data Fields
 
@@ -48,8 +51,25 @@ The system collects the following information for each student:
    
    Or install manually:
    ```bash
-   pip install openpyxl
+   pip install openpyxl flask gunicorn
+   # For Google Sheets integration:
+   pip install google-api-python-client google-auth google-auth-oauthlib google-auth-httplib2
    ```
+
+## Storage Options
+
+### Option 1: Excel Storage (Default)
+- Data stored in local Excel files
+- Works offline
+- Suitable for single-user scenarios
+- Files may be lost on cloud deployments
+
+### Option 2: Google Sheets Storage (Recommended for Cloud)
+- Data stored in Google Sheets
+- Cloud-based and persistent
+- Real-time collaboration
+- Survives application restarts
+- **Setup Required**: See [Google Sheets Setup Guide](GOOGLE_SHEETS_SETUP.md)
 
 ## Usage
 

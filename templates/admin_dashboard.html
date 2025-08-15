@@ -573,12 +573,15 @@
     <!-- Header -->
     <div class="header">
         <div class="header-content">
-            <div class="header-title">
+                    <div class="header-title">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="School Logo" style="width: 50px; height: 50px; object-fit: contain;" onerror="this.style.display='none'">
                 <div>
                     <h1>🎓 Admin Dashboard</h1>
                     <div class="header-subtitle">Govt Girls Secondary School Nishtar Road Khi</div>
                 </div>
             </div>
+        </div>
             <div class="user-info">
                 <span>Welcome, Admin</span>
                 <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
@@ -602,6 +605,10 @@
                 <div class="stat-card">
                     <div class="stat-number" id="active-users">1</div>
                     <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card" id="cache-status" style="cursor: pointer;" onclick="refreshCache()">
+                    <div class="stat-number" id="cache-indicator">🔄</div>
+                    <div class="stat-label">Cache Status</div>
                 </div>
             </div>
         </div>
@@ -1061,45 +1068,49 @@
 
         // View student
         function viewStudent(sheetName, rowNumber) {
-            window.open(`/student_details?sheet=${sheetName}&row=${rowNumber}`, '_blank');
+            // Open student details in new tab
+            const url = `/student_details?sheet=${encodeURIComponent(sheetName)}&row=${rowNumber}`;
+            window.open(url, '_blank');
         }
 
         // Delete student
         function deleteStudent(sheetName, rowNumber, studentName) {
-            if (confirm(`Are you sure you want to delete student "${studentName}"?\n\nThis action cannot be undone and will permanently remove the student from the Excel file.`)) {
-                const deleteButtons = document.querySelectorAll('button[onclick*="deleteStudent"]');
+            if (confirm(`Are you sure you want to delete student "${studentName}"?\n\nThis action cannot be undone and will permanently remove the student from the database.`)) {
+                // Find and disable all delete buttons for this student
+                const deleteButtons = document.querySelectorAll(`button[onclick*="deleteStudent('${sheetName}', ${rowNumber}"]`);
                 deleteButtons.forEach(btn => {
-                    if (btn.onclick.toString().includes(`${rowNumber}`)) {
-                        btn.disabled = true;
-                        btn.textContent = 'Deleting...';
-                    }
+                    btn.disabled = true;
+                    btn.innerHTML = '🗑️ Deleting...';
                 });
                 
-                fetch(`/api/delete_student/${sheetName}/${rowNumber}`, {
+                fetch(`/api/delete_student/${encodeURIComponent(sheetName)}/${rowNumber}`, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showMessage(data.message, 'success');
-                        showAllData(); // Refresh the data
+                        // Refresh the current view
+                        if (window.location.href.includes('admin_dashboard')) {
+                            showAllData();
+                        } else {
+                            location.reload();
+                        }
                     } else {
-                        showMessage('Error: ' + data.message);
+                        showMessage('Error: ' + data.message, 'error');
+                        // Re-enable buttons on error
                         deleteButtons.forEach(btn => {
-                            if (btn.onclick.toString().includes(`${rowNumber}`)) {
-                                btn.disabled = false;
-                                btn.textContent = 'Delete';
-                            }
+                            btn.disabled = false;
+                            btn.innerHTML = '🗑️ Delete';
                         });
                     }
                 })
                 .catch(error => {
-                    showMessage('Error deleting student: ' + error.message);
+                    showMessage('Error deleting student: ' + error.message, 'error');
+                    // Re-enable buttons on error
                     deleteButtons.forEach(btn => {
-                        if (btn.onclick.toString().includes(`${rowNumber}`)) {
-                            btn.disabled = false;
-                            btn.textContent = 'Delete';
-                        }
+                        btn.disabled = false;
+                        btn.innerHTML = '🗑️ Delete';
                     });
                 });
             }
@@ -1201,6 +1212,57 @@
                 e.target.classList.add('active');
             }
         });
+        
+        // Cache refresh function
+        function refreshCache() {
+            const cacheIndicator = document.getElementById('cache-indicator');
+            const originalText = cacheIndicator.textContent;
+            
+            cacheIndicator.textContent = '⏳';
+            cacheIndicator.style.color = '#f39c12';
+            
+            fetch('/api/refresh_cache', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cacheIndicator.textContent = '✅';
+                    cacheIndicator.style.color = '#27ae60';
+                    showMessage('Cache refreshed successfully!', 'success');
+                    
+                    // Reset indicator after 3 seconds
+                    setTimeout(() => {
+                        cacheIndicator.textContent = '🔄';
+                        cacheIndicator.style.color = '#4299e1';
+                    }, 3000);
+                } else {
+                    cacheIndicator.textContent = '❌';
+                    cacheIndicator.style.color = '#e74c3c';
+                    showMessage('Error refreshing cache: ' + data.message, 'error');
+                    
+                    // Reset indicator after 3 seconds
+                    setTimeout(() => {
+                        cacheIndicator.textContent = originalText;
+                        cacheIndicator.style.color = '#4299e1';
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                cacheIndicator.textContent = '❌';
+                cacheIndicator.style.color = '#e74c3c';
+                showMessage('Error refreshing cache: ' + error.message, 'error');
+                
+                // Reset indicator after 3 seconds
+                setTimeout(() => {
+                    cacheIndicator.textContent = originalText;
+                    cacheIndicator.style.color = '#4299e1';
+                }, 3000);
+            });
+        }
     </script>
 </body>
 </html>

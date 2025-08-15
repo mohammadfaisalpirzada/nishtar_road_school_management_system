@@ -31,6 +31,9 @@ This guide explains how to deploy the Nishtar Road School Management System to R
    - Add the following variables:
      - `SECRET_KEY`: A secure random string for Flask sessions
      - `FLASK_ENV`: Set to `production`
+     - `USE_GOOGLE_SHEETS`: Set to `true` (recommended for persistent data)
+     - `GOOGLE_SHEETS_ID`: Your Google Spreadsheet ID (see Google Sheets Setup)
+     - `GOOGLE_CREDENTIALS_JSON`: Your service account credentials as JSON string
 
 4. **Deploy:**
    - Railway will automatically detect the Python app
@@ -83,13 +86,24 @@ Set these variables in Railway dashboard:
 
 ## Important Notes
 
-1. **File Storage**: The current implementation stores data in Excel files. On Railway, the filesystem is ephemeral, meaning files may be lost on redeploys. Consider migrating to a database for production use.
+1. **Data Storage Options**:
+   - **Excel Storage (Default)**: Files are ephemeral on Railway and will be lost on redeploys
+   - **Google Sheets Storage (Recommended)**: Persistent cloud storage that survives redeploys
+   - Set `USE_GOOGLE_SHEETS=true` for production deployments
 
-2. **Security**: Change default passwords before deploying to production.
+2. **Google Sheets Setup**: 
+   - Follow the [Google Sheets Setup Guide](GOOGLE_SHEETS_SETUP.md) before deployment
+   - Ensure `GOOGLE_SHEETS_ID` and `GOOGLE_CREDENTIALS_JSON` are properly configured
+   - Test the integration locally before deploying
 
-3. **HTTPS**: Railway provides HTTPS by default for all deployments.
+3. **Security**: 
+   - Change default passwords before deploying to production
+   - Keep Google service account credentials secure
+   - Never commit `credentials.json` to your repository
 
-4. **Custom Domain**: You can configure a custom domain in Railway dashboard.
+4. **HTTPS**: Railway provides HTTPS by default for all deployments.
+
+5. **Custom Domain**: You can configure a custom domain in Railway dashboard.
 
 ## Troubleshooting
 

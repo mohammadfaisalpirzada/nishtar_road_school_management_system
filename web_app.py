@@ -1,42 +1,34 @@
 #!/usr/bin/env python3
 """
-Web-based Student Data Entry System
-Allows mobile data entry with PC file storage
+Student Data Entry Web Application
+Now using Google Sheets for cloud storage
 """
 
+import time
+import threading
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_file
-from student_data_entry import StudentDataEntry
+from google_sheets_data_entry import GoogleSheetsDataEntry
+from config import USERS, SECRET_KEY, APP_CONFIG, authenticate_user
 import os
-import json
-from datetime import datetime
 from functools import wraps
-from consolidate_data import consolidate_student_data
-import tempfile
-import shutil
+from dotenv import load_dotenv
+import importlib
+import consolidate_data
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'student_data_entry_2025_admin_panel')
-
-# User credentials and roles
-USERS = {
-    'admin': {'password': 'admin', 'role': 'admin', 'access': 'all'},
-    'class1': {'password': 'class1', 'role': 'teacher', 'access': 'I'},
-    'class2': {'password': 'class2', 'role': 'teacher', 'access': 'II'},
-    'class3': {'password': 'class3', 'role': 'teacher', 'access': 'III'},
-    'class4': {'password': 'class4', 'role': 'teacher', 'access': 'IV'},
-    'class5': {'password': 'class5', 'role': 'teacher', 'access': 'V'},
-    'class6': {'password': 'class6', 'role': 'teacher', 'access': 'VI'},
-    'class7': {'password': 'class7', 'role': 'teacher', 'access': 'VII'},
-    'class8': {'password': 'class8', 'role': 'teacher', 'access': 'VIII'},
-    'class9': {'password': 'class9', 'role': 'teacher', 'access': 'IX'},
-    'class10': {'password': 'class10', 'role': 'teacher', 'access': 'X'},
-    'ece': {'password': 'ece', 'role': 'teacher', 'access': 'ECE'}
-}
+app.secret_key = SECRET_KEY
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('1', 'true', 'yes')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
+        if 'username' not in session:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -44,51 +36,181 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session or session.get('role') != 'admin':
-            flash('Admin access required')
+        if 'username' not in session or session.get('role') != 'admin':
+            flash('Admin access required', 'error')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
 
-# Initialize the data entry system
-data_entry = StudentDataEntry()
+# Initialize Google Sheets data entry
+try:
+    data_entry = GoogleSheetsDataEntry()
+    print("Using Google Sheets for data storage")
+except Exception as e:
+    print(f"Failed to initialize Google Sheets: {e}")
+    print("Please check your Google Sheets configuration in .env file")
+    raise e
+
+# Cache system for better performance
+class DataCache:
+    def __init__(self):
+        self.cache = {}
+        self.cache_timestamps = {}
+        self.cache_duration = 300  # 5 minutes cache
+        self.lock = threading.Lock()
+    
+    def get(self, key):
+        with self.lock:
+            if key in self.cache:
+                timestamp = self.cache_timestamps.get(key, 0)
+                if time.time() - timestamp < self.cache_duration:
+                    return self.cache[key]
+                else:
+                    # Cache expired, remove it
+                    del self.cache[key]
+                    if key in self.cache_timestamps:
+                        del self.cache_timestamps[key]
+            return None
+    
+    def set(self, key, value):
+        with self.lock:
+            self.cache[key] = value
+            self.cache_timestamps[key] = time.time()
+    
+    def clear(self):
+        with self.lock:
+            self.cache.clear()
+            self.cache_timestamps.clear()
+    
+    def get_all_data(self):
+        return self.get('all_students')
+    
+    def set_all_data(self, data):
+        self.set('all_students', data)
+    
+    def get_class_data(self, class_name):
+        return self.get(f'class_{class_name}')
+    
+    def set_class_data(self, class_name, data):
+        self.set(f'class_{class_name}', data)
+    
+    def get_class_wise_data(self):
+        return self.get('class_wise_data')
+    
+    def set_class_wise_data(self, data):
+        self.set('class_wise_data', data)
+
+# Initialize cache
+data_cache = DataCache()
+
+# Background sync thread
+def background_sync():
+    """Background thread to sync data periodically"""
+    while True:
+        try:
+            print("🔄 Background sync started...")
+            # Sync all data
+            all_students = data_entry.get_all_students()
+            data_cache.set_all_data(all_students)
+            
+            # Sync class-wise data (use method if present, otherwise compute)
+            try:
+                if hasattr(data_entry, 'get_class_wise_data') and callable(getattr(data_entry, 'get_class_wise_data')):
+                    class_wise_data = data_entry.get_class_wise_data()
+                else:
+                    # Compute class-wise data using available methods
+                    classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+                    class_wise_data = []
+                    for cls in classes:
+                        try:
+                            student_count = data_entry.get_class_student_count(cls)
+                            male_count = data_entry.get_class_gender_count(cls, 'Male')
+                            female_count = data_entry.get_class_gender_count(cls, 'Female')
+                        except Exception as inner_e:
+                            print(f"Warning: error getting stats for {cls}: {inner_e}")
+                            student_count = male_count = female_count = 0
+                        class_wise_data.append({
+                            'name': cls,
+                            'total_students': student_count,
+                            'male_students': male_count,
+                            'female_students': female_count
+                        })
+                data_cache.set_class_wise_data(class_wise_data)
+            except Exception as e:
+                # Log and continue; don't let missing helper break the entire sync
+                print(f"❌ Background sync error (class-wise): {e}")
+            
+            # Sync individual class data
+            classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+            for class_name in classes:
+                class_data = data_entry.get_class_students(class_name)
+                data_cache.set_class_data(class_name, class_data)
+            
+            print("✅ Background sync completed")
+            time.sleep(300)  # Sync every 5 minutes
+        except Exception as e:
+            # Common network/SSL/HTTP errors can cause transient failures. Log full detail and back off.
+            print(f"❌ Background sync error: {e}")
+            time.sleep(60)  # Wait 1 minute on error
+
+# Start background sync thread
+sync_thread = threading.Thread(target=background_sync, daemon=True)
+sync_thread.start()
 
 @app.route('/')
 def index():
-    """Redirect to login if not authenticated, otherwise to dashboard"""
-    if 'user' in session:
+    if 'username' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login page"""
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if username in USERS and USERS[username]['password'] == password:
-            session['user'] = username
-            session['role'] = USERS[username]['role']
-            session['access'] = USERS[username]['access']
-            flash(f'Welcome, {username}!')
-            return redirect(url_for('dashboard'))
+        # Support both form-encoded POST (regular submit) and JSON POST (AJAX)
+        is_json = request.is_json
+        if is_json:
+            payload = request.get_json(silent=True) or {}
+            username = payload.get('username', '')
+            password = payload.get('password', '')
         else:
-            flash('Invalid username or password')
-    
+            username = request.form.get('username', '')
+            password = request.form.get('password', '')
+
+        print(f"Login attempt - Username: {username}")  # Debug log
+
+        # Use secure authentication
+        user = authenticate_user(username, password)
+
+        if user:
+            print(f"Login successful - User: {username}, Role: {user['role']}")  # Debug log
+            session['username'] = username
+            session['role'] = user['role']
+            session['access'] = user['access']
+
+            # Return JSON for AJAX requests, otherwise redirect as before
+            if is_json:
+                return jsonify({'success': True, 'redirect': url_for('dashboard')})
+            else:
+                flash(f'Welcome, {username}!', 'success')
+                return redirect(url_for('dashboard'))
+        else:
+            print(f"Login failed - Invalid credentials for user: {username}")  # Debug log
+            if is_json:
+                return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+            else:
+                flash('Invalid credentials. Please check your username and password.', 'error')
+
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    """Logout and clear session"""
     session.clear()
-    flash('You have been logged out')
+    flash('You have been logged out successfully.', 'info')
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Main dashboard based on user role"""
     user_role = session.get('role')
     user_access = session.get('access')
     
@@ -100,119 +222,122 @@ def dashboard():
 @app.route('/form')
 @login_required
 def form():
-    """Student data entry form - accessible to all authenticated users"""
-    try:
-        return render_template('form.html')
-    except Exception as e:
-        return render_template('error.html', error=str(e))
+    user_access = session.get('access')
+    return render_template('form.html', user_access=user_access)
 
 @app.route('/submit', methods=['POST'])
 @login_required
 def submit_data():
-    """Handle form submission"""
     try:
         # Get form data
-        form_data = request.form.to_dict()
-        
-        # Validate required fields
-        required_fields = ['student_name', 'father_name', 'gr_number', 'student_class']
-        for field in required_fields:
-            if not form_data.get(field):
-                return jsonify({
-                    'success': False, 
-                    'message': f'{field.replace("_", " ").title()} is required'
-                })
-        
-        # Get student class for Class_S.No generation
-        student_class = form_data.get('student_class', '')
-        class_sno = data_entry.get_next_class_serial_number(student_class)
-        
-        # Generate Class_S.No with correct format
-        if student_class == "ECE":
-            class_s_no = f"ECE_{class_sno:02d}"
-        else:
-            # For numbered classes (I, II, III, etc.), use format like 101, 201, 301
-            class_mapping = {
-                "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
-                "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10
-            }
-            if student_class in class_mapping:
-                class_prefix = class_mapping[student_class]
-                class_s_no = f"{class_prefix}{class_sno:02d}"
-            else:
-                # Fallback for any other class format
-                class_s_no = f"{student_class}_{class_sno:02d}"
-        
-        # Prepare student data with all required fields
         student_data = {
-            'Class_S.No': class_s_no,
-            'GR#': form_data.get('gr_number', ''),
-            'Student Name': form_data.get('student_name', ''),
-            'Father\'s Name': form_data.get('father_name', ''),
-            'Gender': form_data.get('gender', 'N/A'),
-            'Religion': form_data.get('religion', ''),
-            'Contact Number': form_data.get('contact_number', 'N/A'),
-            'CNIC / B-Form': form_data.get('cnic_bform', 'N/A'),
-            'Date of Birth': form_data.get('date_of_birth', 'N/A'),
-            'Father/Mother\'s CNIC': form_data.get('father_cnic', 'N/A'),
-            'Guardian Name': '',  # Will be set based on guardian type
-            'Guardian CNIC': '',  # Will be set based on guardian type
-            'Guardian Relation': '',  # Will be set based on guardian type
-            'Student Class': form_data.get('student_class', ''),
-            'Class Section': '',  # Will be set based on gender
-            'SEMIS Code': '408070227',  # Auto-set
-            'Date of Admission': form_data.get('date_of_admission', 'N/A'),
-            'Remarks': 'N/A'  # Admin-only field, set after admission
+            'Class_S.No': request.form.get('class_sno'),
+            'GR#': request.form.get('gr_number'),
+            'Student Name': request.form.get('student_name'),
+            "Father's Name": request.form.get('father_name'),
+            'Gender': request.form.get('gender'),
+            'Religion': request.form.get('religion'),
+            'Contact Number': request.form.get('contact_number'),
+            'CNIC / B-Form': request.form.get('cnic_bform'),
+            'Date of Birth': request.form.get('date_of_birth'),
+            "Father/Mother's CNIC": request.form.get('parent_cnic'),
+            'Guardian Name': request.form.get('guardian_name'),
+            'Guardian CNIC': request.form.get('guardian_cnic'),
+            'Guardian Relation': request.form.get('guardian_relation'),
+            'Student Class': request.form.get('student_class'),
+            'Class Section': request.form.get('class_section'),
+            'SEMIS Code': request.form.get('semis_code'),
+            'Date of Admission': request.form.get('date_of_admission'),
+            'Remarks': request.form.get('remarks')
         }
         
-        # Handle guardian selection
-        guardian_type = form_data.get('guardian_type', 'N')
-        if guardian_type == 'F':  # Father
-            student_data['Guardian Name'] = student_data['Father\'s Name']
-            student_data['Guardian CNIC'] = student_data['Father/Mother\'s CNIC']
-            student_data['Guardian Relation'] = 'Father'
-        elif guardian_type == 'N':  # Nil
-            student_data['Guardian Name'] = '-'
-            student_data['Guardian CNIC'] = '-'
-            student_data['Guardian Relation'] = '-'
-        else:  # Others
-            student_data['Guardian Name'] = form_data.get('guardian_name', 'N/A')
-            student_data['Guardian CNIC'] = form_data.get('guardian_cnic', 'N/A')
-            student_data['Guardian Relation'] = form_data.get('guardian_relation', 'N/A')
-        
-        # Set Class Section based on gender
-        gender = student_data.get('Gender', '').lower()
-        if gender in ['male', 'm']:
-            student_data['Class Section'] = 'Boys'
-        else:  # female or any other value defaults to Girls
-            student_data['Class Section'] = 'Girls'
-        
-        # Class_S.No is no longer used - keeping empty for Excel structure compatibility
-        
-        # Validate GR# for duplicates
+        # Check for duplicate GR number
         if data_entry.check_duplicate_gr(student_data['GR#']):
             return jsonify({
                 'success': False,
-                'message': f'GR# {student_data["GR#"]} already exists. Please use a different number.'
+                'message': f'GR Number {student_data["GR#"]} already exists!'
             })
         
-        # Format CNIC numbers
-        cnic_fields = ['CNIC / B-Form', 'Father/Mother\'s CNIC', 'Guardian CNIC']
-        for field in cnic_fields:
-            if student_data.get(field) and student_data[field] != '-':
-                student_data[field] = data_entry.format_cnic(student_data[field])
+        # Add student record
+        success = data_entry.add_student_record(student_data)
         
-        # Save to Excel
-        if data_entry.add_student_record(student_data):
+        if success:
+            # Clear and refresh caches so admin dashboard shows updated totals immediately
+            try:
+                data_cache.clear()
+
+                # Try to repopulate the all-students cache (if available)
+                try:
+                    if hasattr(data_entry, 'get_all_students'):
+                        all_students = data_entry.get_all_students()
+                        data_cache.set_all_data(all_students)
+                except Exception as _:
+                    # Non-fatal: if repopulate fails, cache was cleared and will be rebuilt later
+                    pass
+
+                # Refresh the class-specific cache for the class we just added
+                try:
+                    cls = student_data.get('Student Class')
+                    if cls:
+                        if hasattr(data_entry, 'get_class_students'):
+                            class_students = data_entry.get_class_students(cls)
+                            data_cache.set_class_data(cls, class_students)
+                except Exception:
+                    pass
+
+                # Refresh overall class-wise summary if helper exists, otherwise compute quickly
+                try:
+                    if hasattr(data_entry, 'get_class_wise_data'):
+                        data_cache.set_class_wise_data(data_entry.get_class_wise_data())
+                    else:
+                        # Quick computation fallback
+                        all_classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+                        classes_data = []
+                        total_students = total_male = total_female = 0
+                        for class_name in all_classes:
+                            try:
+                                c_total = data_entry.get_class_student_count(class_name)
+                                c_male = data_entry.get_class_gender_count(class_name, 'Male')
+                                c_female = data_entry.get_class_gender_count(class_name, 'Female')
+                                next_sno = data_entry.get_next_class_serial_number(class_name)
+                                total_students += c_total
+                                total_male += c_male
+                                total_female += c_female
+                                classes_data.append({
+                                    'name': class_name,
+                                    'total_students': c_total,
+                                    'male_students': c_male,
+                                    'female_students': c_female,
+                                    'next_sno': next_sno
+                                })
+                            except Exception:
+                                classes_data.append({
+                                    'name': class_name,
+                                    'total_students': 0,
+                                    'male_students': 0,
+                                    'female_students': 0,
+                                    'next_sno': 1
+                                })
+                        data_cache.set_class_wise_data({'success': True, 'classes': classes_data, 'summary': {
+                            'total_students': total_students,
+                            'total_male': total_male,
+                            'total_female': total_female
+                        }})
+                except Exception:
+                    pass
+
+            except Exception:
+                # Non-fatal: ensure outer try has an except so syntax is valid
+                pass
+
             return jsonify({
                 'success': True,
-                'message': f'Student record saved successfully! Class S.No: {student_data["Class_S.No"]}, GR#: {student_data["GR#"]}',
-                'student_data': student_data
+                'message': 'Student data saved successfully!'
             })
         else:
             return jsonify({
                 'success': False,
-                'message': 'Failed to save student record to Excel file. Please check file permissions and try again.'
+                'message': 'Failed to save student data'
             })
             
     except Exception as e:
@@ -225,262 +350,82 @@ def submit_data():
 @login_required
 def check_gr(gr_number):
     """Check if GR number already exists"""
-    try:
-        exists = data_entry.check_duplicate_gr(gr_number)
-        return jsonify({'exists': exists})
-    except Exception as e:
-        return jsonify({'error': str(e)})
+    exists = data_entry.check_duplicate_gr(gr_number)
+    return jsonify({'exists': exists})
 
 @app.route('/get_next_class_sno/<student_class>')
 @login_required
 def get_next_class_sno(student_class):
-    """Get next class serial number for AJAX updates"""
+    """Get the next serial number for a class"""
     try:
-        next_class_sno = data_entry.get_next_class_serial_number(student_class)
-        
-        # Format based on class type
-        if student_class == "ECE":
-            formatted_sno = f"ECE_{next_class_sno:02d}"
-        else:
-            # For numbered classes (I, II, III, etc.), use format like 101, 201, 301
-            class_mapping = {
-                "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
-                "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10
-            }
-            if student_class in class_mapping:
-                class_prefix = class_mapping[student_class]
-                formatted_sno = f"{class_prefix}{next_class_sno:03d}"
-            else:
-                # Fallback for any other class format
-                formatted_sno = f"{student_class}_{next_class_sno:02d}"
-        
-        return jsonify({'success': True, 'next_class_sno': formatted_sno})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/stats')
-@login_required
-def api_stats():
-    """API endpoint for dashboard statistics"""
-    try:
-        total_students = data_entry.get_total_students()
-        total_classes = 11  # ECE + I-X
-        
+        next_sno = data_entry.get_next_class_serial_number(student_class)
         return jsonify({
             'success': True,
-            'total_students': total_students,
-            'total_classes': total_classes
+            'next_sno': next_sno
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/class_wise_data')
-@login_required
-def api_class_wise_data():
-    """API endpoint for class-wise data overview"""
-    try:
-        # Define all classes
-        all_classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-        classes_data = []
-        
-        # Summary statistics
-        total_students = 0
-        total_male = 0
-        total_female = 0
-        
-        for class_name in all_classes:
-            # Get class statistics
-            class_students = data_entry.get_class_student_count(class_name)
-            boys_section = data_entry.get_class_section_count(class_name, 'Boys')
-            girls_section = data_entry.get_class_section_count(class_name, 'Girls')
-            next_sno = data_entry.get_next_class_serial_number(class_name)
-            
-            # Get gender statistics for this class
-            male_students = data_entry.get_class_gender_count(class_name, 'Male')
-            female_students = data_entry.get_class_gender_count(class_name, 'Female')
-            
-            # Add to totals
-            total_students += class_students
-            total_male += male_students
-            total_female += female_students
-            
-            classes_data.append({
-                'name': class_name,
-                'total_students': class_students,
-                'male_students': male_students,
-                'female_students': female_students,
-                'boys_section': boys_section,
-                'girls_section': girls_section,
-                'next_sno': next_sno
-            })
-        
         return jsonify({
-            'success': True,
-            'classes': classes_data,
-            'summary': {
-                'total_students': total_students,
-                'total_male': total_male,
-                'total_female': total_female
-            }
+            'success': False,
+            'message': str(e)
         })
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/class_data/<class_name>')
-@login_required
-def api_class_data(class_name):
-    """API endpoint to get class student data"""
-    user_access = session.get('access')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
-    try:
-        # Use the correct sheet naming convention
-        sheet_name = f"Class_{class_name}"
-        
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': True, 'students': []})
-        
-        sheet = data_entry.workbook[sheet_name]
-        students = []
-        
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
-        
-        # Extract student data
-        for row in range(2, sheet.max_row + 1):
-            if sheet.cell(row=row, column=1).value:  # Check if S.No exists
-                student = {
-                    'sno': sheet.cell(row=row, column=headers.get('S.No', 1)).value,
-                    'row_number': row,
-                    'class_sno': sheet.cell(row=row, column=headers.get('Class_S.No', 2)).value,
-                    'student_name': sheet.cell(row=row, column=headers.get('Student Name', 3)).value,
-                    'father_name': sheet.cell(row=row, column=headers.get("Father's Name", 4)).value,
-                    'class_section': sheet.cell(row=row, column=headers.get('Class Section', 15)).value,
-                    'gr_number': sheet.cell(row=row, column=headers.get('GR#', 16)).value,
-                    'gender': sheet.cell(row=row, column=headers.get('Gender', 5)).value
-                }
-                students.append(student)
-        
-        return jsonify({'success': True, 'students': students})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/section_data/<class_name>/<section>')
-@login_required
-def api_section_data(class_name, section):
-    """API endpoint to get section-specific student data"""
-    user_access = session.get('access')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
-    try:
-        # Use the correct sheet naming convention
-        sheet_name = f"Class_{class_name}"
-        
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': True, 'students': []})
-        
-        sheet = data_entry.workbook[sheet_name]
-        students = []
-        
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
-        
-        section_col = headers.get('Class Section', 15)
-        
-        # Extract student data for specific section
-        for row in range(2, sheet.max_row + 1):
-            if (sheet.cell(row=row, column=1).value and  # Check if S.No exists
-                sheet.cell(row=row, column=section_col).value == section):
-                student = {
-                    'sno': sheet.cell(row=row, column=headers.get('S.No', 1)).value,
-                    'class_sno': sheet.cell(row=row, column=headers.get('Class_S.No', 2)).value,
-                    'student_name': sheet.cell(row=row, column=headers.get('Student Name', 3)).value,
-                    'father_name': sheet.cell(row=row, column=headers.get('Father Name', 4)).value,
-                    'class_section': sheet.cell(row=row, column=section_col).value,
-                    'gr_number': sheet.cell(row=row, column=headers.get('GR#', 16)).value,
-                    'gender': sheet.cell(row=row, column=headers.get('Gender', 5)).value
-                }
-                students.append(student)
-        
-        return jsonify({'success': True, 'students': students})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/gender_data/<class_name>/<gender>')
-@login_required
-def api_gender_data(class_name, gender):
-    """API endpoint to get gender-specific student data"""
-    user_access = session.get('access')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
-    try:
-        # Use the correct sheet naming convention
-        sheet_name = f"Class_{class_name}"
-        
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': True, 'students': []})
-        
-        sheet = data_entry.workbook[sheet_name]
-        students = []
-        
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
-        
-        gender_col = headers.get('Gender', 5)
-        
-        # Extract student data for specific gender
-        for row in range(2, sheet.max_row + 1):
-            if sheet.cell(row=row, column=1).value:  # Check if S.No exists
-                student_gender = sheet.cell(row=row, column=gender_col).value
-                if student_gender and student_gender.lower() == gender.lower():
-                    student = {
-                        'sno': sheet.cell(row=row, column=headers.get('S.No', 1)).value,
-                        'class_sno': sheet.cell(row=row, column=headers.get('Class_S.No', 2)).value,
-                        'student_name': sheet.cell(row=row, column=headers.get('Student Name', 3)).value,
-                        'father_name': sheet.cell(row=row, column=headers.get('Father Name', 4)).value,
-                        'class_section': sheet.cell(row=row, column=headers.get('Class Section', 15)).value,
-                        'gr_number': sheet.cell(row=row, column=headers.get('GR#', 16)).value,
-                        'gender': student_gender
-                    }
-                    students.append(student)
-        
-        return jsonify({'success': True, 'students': students})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin_dashboard')
 @admin_required
 def admin_dashboard():
     """Admin dashboard with full access"""
     try:
-        total_students = data_entry.get_total_students()
+        # Prefer cached class-wise data to avoid inconsistent counts and quota spikes
         total_classes = 11  # ECE + I-X
+        class_stats = {}
+
+        # Prefer cached full student list (single stable source) to compute total
+        all_students_cached = data_cache.get_all_data()
+        cached = None
+        total_students = 0
+        if all_students_cached is not None:
+            try:
+                total_students = len(all_students_cached)
+            except Exception:
+                total_students = 0
+        else:
+            cached = data_cache.get_class_wise_data()
         
+        if cached:
+            # cached may be either the computed list or the API result structure
+            if isinstance(cached, dict) and cached.get('classes'):
+                classes_list = cached['classes']
+                total_students = cached.get('summary', {}).get('total_students', sum(c.get('total_students', 0) for c in classes_list))
+                for c in classes_list:
+                    name = c.get('name')
+                    class_stats[name] = c.get('total_students', 0)
+            elif isinstance(cached, list):
+                total_students = sum(c.get('total_students', 0) for c in cached)
+                for c in cached:
+                    name = c.get('name')
+                    class_stats[name] = c.get('total_students', 0)
+            else:
+                # Unknown cache format - fall back to per-class queries
+                cached = None
+
+        if not cached:
+            # Cache miss or invalid cache: query class counts (with error handling)
+            total_students = 0
+            all_classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+            for class_name in all_classes:
+                try:
+                    class_count = data_entry.get_class_student_count(class_name)
+                    total_students += class_count
+                    class_stats[class_name] = class_count
+                except Exception as e:
+                    print(f"Error getting count for class {class_name}: {e}")
+                    class_stats[class_name] = 0
+
         return render_template('admin_dashboard.html', 
                              total_students=total_students,
-                             total_classes=total_classes)
+                             total_classes=total_classes,
+                             class_stats=class_stats)
     except Exception as e:
+        flash(f'Error loading dashboard: {str(e)}', 'error')
         return render_template('error.html', error=str(e))
 
 @app.route('/class_dashboard/<class_name>')
@@ -491,7 +436,7 @@ def class_dashboard(class_name):
     
     # Check if user has access to this class
     if user_access != 'all' and user_access != class_name:
-        flash('Access denied to this class')
+        flash('Access denied to this class', 'error')
         return redirect(url_for('dashboard'))
     
     try:
@@ -511,16 +456,11 @@ def class_dashboard(class_name):
                              next_sno=next_sno,
                              user_role=session.get('role'))
     except Exception as e:
+        flash(f'Error loading class dashboard: {str(e)}', 'error')
         return render_template('error.html', error=str(e))
 
-# Placeholder routes for dashboard buttons
-@app.route('/data-view')
-@login_required
-def data_view():
-    """Data viewing page (placeholder)"""
-    return "<h1>Data View</h1><p>This feature will be implemented soon.</p><a href='/dashboard'>← Back to Dashboard</a>"
-
 @app.route('/data-edit')
+@app.route('/data_edit')
 @admin_required
 def data_edit():
     """Data editing page for admin"""
@@ -530,39 +470,221 @@ def data_edit():
 @login_required
 def admin_student_edit():
     """Admin student edit page"""
-    if session.get('role') != 'admin':
-        return redirect(url_for('dashboard'))
-    return render_template('admin_student_edit.html')
+    sheet_name = request.args.get('sheet')
+    row_number = request.args.get('row')
+    
+    if not sheet_name or not row_number:
+        flash('Invalid student reference', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    try:
+        row_number = int(row_number)
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        
+        if not sheet_data or len(sheet_data) < row_number:
+            flash('Student not found', 'error')
+            return redirect(url_for('admin_dashboard'))
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student = {}
+        for i, header in enumerate(headers):
+            student[header] = student_row[i] if i < len(student_row) else ''
+        
+        return render_template('admin_student_edit.html', 
+                             student=student, 
+                             sheet_name=sheet_name, 
+                             row_number=row_number,
+                             headers=headers)
+    except Exception as e:
+        flash(f'Error loading student: {str(e)}', 'error')
+        return redirect(url_for('admin_dashboard'))
 
-@app.route('/class-wise')
+@app.route('/teacher_student_edit')
 @login_required
-def class_wise():
-    """Class-wise data page"""
-    return render_template('class_wise.html')
+def teacher_student_edit():
+    """Teacher student edit page"""
+    sheet_name = request.args.get('sheet')
+    row_number = request.args.get('row')
+    
+    if not sheet_name or not row_number:
+        flash('Invalid student reference', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        row_number = int(row_number)
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        
+        if not sheet_data or len(sheet_data) < row_number:
+            flash('Student not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student = {}
+        for i, header in enumerate(headers):
+            student[header] = student_row[i] if i < len(student_row) else ''
+        
+        return render_template('teacher_student_edit.html', 
+                             student=student, 
+                             sheet_name=sheet_name, 
+                             row_number=row_number,
+                             headers=headers)
+    except Exception as e:
+        flash(f'Error loading student: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/reports')
 @login_required
 def reports():
-    """Reports page with data visualization"""
+    """Reports page"""
     return render_template('reports.html')
 
 @app.route('/class_report/<class_name>')
 @login_required
 def class_report(class_name):
-    """Class-specific report page"""
-    user_access = session.get('access')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        flash('Access denied to this class')
-        return redirect(url_for('dashboard'))
-    
+    """Class report page"""
     return render_template('class_report.html', class_name=class_name)
 
-@app.route('/api/class_report_data/<class_name>')
+@app.route('/settings')
 @login_required
-def api_class_report_data(class_name):
-    """API endpoint to get class report data for charts"""
+def settings():
+    """Settings page (placeholder)"""
+    return "<h1>Settings</h1><p>This feature will be implemented soon.</p><a href='/dashboard'>← Back to Dashboard</a>"
+
+@app.route('/api/class_wise_data')
+@login_required
+def api_class_wise_data():
+    """API endpoint to get class-wise data overview"""
+    try:
+        # Try to get from cache first
+        cached_data = data_cache.get_class_wise_data()
+        if cached_data is not None:
+            return jsonify(cached_data)
+        
+        # Cache miss, fetch from Google Sheets
+        all_classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+        classes_data = []
+        
+        # Summary statistics
+        total_students = 0
+        total_male = 0
+        total_female = 0
+        
+        for class_name in all_classes:
+            try:
+                # Get class statistics
+                class_students = data_entry.get_class_student_count(class_name)
+                male_students = data_entry.get_class_gender_count(class_name, 'Male')
+                female_students = data_entry.get_class_gender_count(class_name, 'Female')
+                next_sno = data_entry.get_next_class_serial_number(class_name)
+                
+                # Add to totals
+                total_students += class_students
+                total_male += male_students
+                total_female += female_students
+                
+                classes_data.append({
+                    'name': class_name,
+                    'total_students': class_students,
+                    'male_students': male_students,
+                    'female_students': female_students,
+                    'next_sno': next_sno
+                })
+            except Exception as e:
+                # If there's an error with a specific class, continue with others
+                classes_data.append({
+                    'name': class_name,
+                    'total_students': 0,
+                    'male_students': 0,
+                    'female_students': 0,
+                    'next_sno': 1
+                })
+        
+        result = {
+            'success': True,
+            'classes': classes_data,
+            'summary': {
+                'total_students': total_students,
+                'total_male': total_male,
+                'total_female': total_female
+            }
+        }
+        
+        # Cache the result
+        data_cache.set_class_wise_data(result)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
+
+
+@app.route('/api/next_class_snos')
+@login_required
+def api_next_class_snos():
+    """Return next serial number for each class in one request to reduce client fetches"""
+    try:
+        classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+        result = {}
+        for cls in classes:
+            try:
+                # try cache first
+                cached = data_cache.get_class_data(cls)
+                # We don't store next_sno in cache; compute via method
+                next_sno = data_entry.get_next_class_serial_number(cls)
+            except Exception as e:
+                print(f"Error computing next SNo for {cls}: {e}")
+                next_sno = 1
+            result[cls] = next_sno
+        return jsonify({'success': True, 'next_snos': result})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/consolidate_data', methods=['POST'])
+@admin_required
+def api_consolidate_data():
+    """Trigger consolidation in background to avoid blocking the request"""
+    try:
+        def run_consolidation():
+            try:
+                print("🔁 Starting background consolidation...")
+                # Re-import to pick up local changes if any
+                importlib.reload(consolidate_data)
+                consolidate_data.consolidate_student_data()
+                print("✅ Background consolidation finished")
+                # Clear cache after consolidation
+                data_cache.clear()
+            except Exception as e:
+                print(f"❌ Consolidation failed in background: {e}")
+
+        t = threading.Thread(target=run_consolidation, daemon=True)
+        t.start()
+        return jsonify({'success': True, 'message': 'Consolidation started in background'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/class_data/<class_name>')
+@login_required
+def api_class_data(class_name):
+    """API endpoint to get class student data"""
     user_access = session.get('access')
     
     # Check if user has access to this class
@@ -570,91 +692,162 @@ def api_class_report_data(class_name):
         return jsonify({'success': False, 'message': 'Access denied'})
     
     try:
-        from datetime import datetime
-        import calendar
+        # Try to get from cache first
+        cached_data = data_cache.get_class_data(class_name)
+        if cached_data is not None:
+            return jsonify({
+                'success': True,
+                'students': cached_data,
+                'cached': True
+            })
         
-        # Use the correct sheet naming convention
+        # Cache miss, fetch from Google Sheets
         sheet_name = f"Class_{class_name}"
         
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': True, 'gender_data': {}, 'age_data': {}, 'section_data': {}, 'total_students': 0})
+        if not data_entry.sheet_exists(sheet_name):
+            return jsonify({'success': True, 'students': []})
         
-        sheet = data_entry.workbook[sheet_name]
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        students = []
         
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
+        if not sheet_data or len(sheet_data) <= 1:  # Only headers or empty
+            return jsonify({'success': True, 'students': []})
         
-        # Initialize counters
-        gender_count = {'Male': 0, 'Female': 0}
-        age_groups = {'3-5': 0, '6-8': 0, '9-11': 0, '12-14': 0, '15+': 0}
-        section_count = {'Boys': 0, 'Girls': 0}
-        total_students = 0
+        # Get headers from first row
+        headers = sheet_data[0] if sheet_data else []
+        header_indices = {header: idx for idx, header in enumerate(headers)}
         
-        # Process each student row
-        for row in range(2, sheet.max_row + 1):
-            if sheet.cell(row=row, column=1).value:  # Check if S.No exists
-                total_students += 1
+        # Extract student data
+        for row_idx, row_data in enumerate(sheet_data[1:], start=2):
+            if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
+                # Pad row_data with empty strings if needed
+                while len(row_data) < len(headers):
+                    row_data.append('')
                 
-                # Gender data
-                gender = sheet.cell(row=row, column=headers.get('Gender', 5)).value
-                if gender and gender.strip():
-                    gender = gender.strip().title()
-                    if gender in gender_count:
-                        gender_count[gender] += 1
-                
-                # Section data
-                section = sheet.cell(row=row, column=headers.get('Class Section', 15)).value
-                if section and section.strip():
-                    section = section.strip().upper()
-                    if section in section_count:
-                        section_count[section] += 1
-                
-                # Age data (calculate from date of birth)
-                dob_cell = sheet.cell(row=row, column=headers.get('Date of Birth', 10)).value
-                if dob_cell:
-                    try:
-                        if isinstance(dob_cell, str):
-                            # Try different date formats
-                            for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y']:
-                                try:
-                                    dob = datetime.strptime(dob_cell, fmt)
-                                    break
-                                except ValueError:
-                                    continue
-                            else:
-                                continue
-                        else:
-                            dob = dob_cell
-                        
-                        # Calculate age
-                        today = datetime.now()
-                        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-                        
-                        # Categorize age
-                        if age <= 5:
-                            age_groups['3-5'] += 1
-                        elif age <= 8:
-                            age_groups['6-8'] += 1
-                        elif age <= 11:
-                            age_groups['9-11'] += 1
-                        elif age <= 14:
-                            age_groups['12-14'] += 1
-                        else:
-                            age_groups['15+'] += 1
-                    except (ValueError, TypeError):
-                        continue
+                student = {
+                    'sno': row_data[header_indices.get('S.No', 0)] if 'S.No' in header_indices else '',
+                    'row_number': row_idx,
+                    'class_sno': row_data[header_indices.get('Class_S.No', 0)] if 'Class_S.No' in header_indices else '',
+                    'student_name': row_data[header_indices.get('Student Name', 2)] if 'Student Name' in header_indices else '',
+                    'father_name': row_data[header_indices.get("Father's Name", 3)] if "Father's Name" in header_indices else '',
+                    'class_section': row_data[header_indices.get('Class Section', 14)] if 'Class Section' in header_indices else '',
+                    'gr_number': row_data[header_indices.get('GR#', 1)] if 'GR#' in header_indices else '',
+                    'gender': row_data[header_indices.get('Gender', 4)] if 'Gender' in header_indices else '',
+                    'religion': row_data[header_indices.get('Religion', 5)] if 'Religion' in header_indices else '',
+                    'contact_number': row_data[header_indices.get('Contact Number', 6)] if 'Contact Number' in header_indices else '',
+                    'cnic_bform': row_data[header_indices.get('CNIC / B-Form', 7)] if 'CNIC / B-Form' in header_indices else '',
+                    'date_of_birth': row_data[header_indices.get('Date of Birth', 8)] if 'Date of Birth' in header_indices else '',
+                    'guardian_name': row_data[header_indices.get('Guardian Name', 10)] if 'Guardian Name' in header_indices else '',
+                    'guardian_relation': row_data[header_indices.get('Guardian Relation', 12)] if 'Guardian Relation' in header_indices else '',
+                    'remarks': row_data[header_indices.get('Remarks', 17)] if 'Remarks' in header_indices else ''
+                }
+                students.append(student)
         
-        return jsonify({
-            'success': True,
-            'gender_data': gender_count,
-            'age_data': age_groups,
-            'section_data': section_count,
-            'total_students': total_students
-        })
+        return jsonify({'success': True, 'students': students})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/gender_data/<class_name>/<gender>')
+@login_required
+def api_gender_data(class_name, gender):
+    """API endpoint to get gender-specific data for a class"""
+    user_access = session.get('access')
+    
+    # Check if user has access to this class
+    if user_access != 'all' and user_access != class_name:
+        return jsonify({'success': False, 'message': 'Access denied'})
+    
+    try:
+        # Get all class data first
+        sheet_name = f"Class_{class_name}"
+        
+        if not data_entry.sheet_exists(sheet_name):
+            return jsonify({'success': True, 'students': []})
+        
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        students = []
+        
+        if not sheet_data or len(sheet_data) <= 1:
+            return jsonify({'success': True, 'students': []})
+        
+        # Get headers from first row
+        headers = sheet_data[0] if sheet_data else []
+        header_indices = {header: idx for idx, header in enumerate(headers)}
+        
+        # Extract student data filtered by gender
+        for row_idx, row_data in enumerate(sheet_data[1:], start=2):
+            if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
+                # Pad row_data with empty strings if needed
+                while len(row_data) < len(headers):
+                    row_data.append('')
+                
+                student_gender = row_data[header_indices.get('Gender', 4)] if 'Gender' in header_indices else ''
+                
+                # Filter by gender
+                if student_gender.strip().lower() == gender.lower():
+                    student = {
+                        'sno': row_data[header_indices.get('S.No', 0)] if 'S.No' in header_indices else '',
+                        'row_number': row_idx,
+                        'class_sno': row_data[header_indices.get('Class_S.No', 0)] if 'Class_S.No' in header_indices else '',
+                        'student_name': row_data[header_indices.get('Student Name', 2)] if 'Student Name' in header_indices else '',
+                        'father_name': row_data[header_indices.get("Father's Name", 3)] if "Father's Name" in header_indices else '',
+                        'class_section': row_data[header_indices.get('Class Section', 14)] if 'Class Section' in header_indices else '',
+                        'gr_number': row_data[header_indices.get('GR#', 1)] if 'GR#' in header_indices else '',
+                        'gender': student_gender,
+                        'remarks': row_data[header_indices.get('Remarks', 17)] if 'Remarks' in header_indices else ''
+                    }
+                    students.append(student)
+        
+        return jsonify({'success': True, 'students': students})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    
+    # Check if user has access to this class
+    if user_access != 'all' and user_access != class_name:
+        return jsonify({'success': False, 'message': 'Access denied'})
+    
+    try:
+        # Get all class data first
+        sheet_name = f"Class_{class_name}"
+        
+        if not data_entry.sheet_exists(sheet_name):
+            return jsonify({'success': True, 'students': []})
+        
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        students = []
+        
+        if not sheet_data or len(sheet_data) <= 1:
+            return jsonify({'success': True, 'students': []})
+        
+        # Get headers from first row
+        headers = sheet_data[0] if sheet_data else []
+        header_indices = {header: idx for idx, header in enumerate(headers)}
+        
+        # Extract student data filtered by gender
+        for row_idx, row_data in enumerate(sheet_data[1:], start=2):
+            if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
+                # Pad row_data with empty strings if needed
+                while len(row_data) < len(headers):
+                    row_data.append('')
+                
+                student_gender = row_data[header_indices.get('Gender', 4)] if 'Gender' in header_indices else ''
+                
+                # Filter by gender
+                if student_gender.strip().lower() == gender.lower():
+                    student = {
+                        'sno': row_data[header_indices.get('S.No', 0)] if 'S.No' in header_indices else '',
+                        'row_number': row_idx,
+                        'class_sno': row_data[header_indices.get('Class_S.No', 0)] if 'Class_S.No' in header_indices else '',
+                        'student_name': row_data[header_indices.get('Student Name', 2)] if 'Student Name' in header_indices else '',
+                        'father_name': row_data[header_indices.get("Father's Name", 3)] if "Father's Name" in header_indices else '',
+                        'class_section': row_data[header_indices.get('Class Section', 14)] if 'Class Section' in header_indices else '',
+                        'gr_number': row_data[header_indices.get('GR#', 1)] if 'GR#' in header_indices else '',
+                        'gender': student_gender,
+                        'remarks': row_data[header_indices.get('Remarks', 17)] if 'Remarks' in header_indices else ''
+                    }
+                    students.append(student)
+        
+        return jsonify({'success': True, 'students': students})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -663,6 +856,17 @@ def api_class_report_data(class_name):
 def api_all_students():
     """API endpoint to get all students data for admin"""
     try:
+        # Try to get from cache first
+        cached_data = data_cache.get_all_data()
+        if cached_data is not None:
+            return jsonify({
+                'success': True,
+                'students': cached_data,
+                'total_count': len(cached_data),
+                'cached': True
+            })
+        
+        # Cache miss, fetch from Google Sheets
         all_students = []
         sno_counter = 1
         
@@ -671,313 +875,267 @@ def api_all_students():
                        'Class_V', 'Class_VI', 'Class_VII', 'Class_VIII', 'Class_IX', 'Class_X']
         
         for sheet_name in class_sheets:
-            if sheet_name in data_entry.workbook.sheetnames:
-                sheet = data_entry.workbook[sheet_name]
+            if data_entry.sheet_exists(sheet_name):
+                sheet_data = data_entry.get_sheet_data(sheet_name)
+                if not sheet_data or len(sheet_data) <= 1:
+                    continue
+                    
+                headers = sheet_data[0] if sheet_data else []
+                header_indices = {header: idx for idx, header in enumerate(headers)}
                 
-                # Get header row to find column indices
-                headers = {}
-                for col in range(1, sheet.max_column + 1):
-                    header_value = sheet.cell(row=1, column=col).value
-                    if header_value:
-                        headers[header_value] = col
-                
-                # Extract student data with all available fields
-                for row in range(2, sheet.max_row + 1):
-                    if sheet.cell(row=row, column=1).value:  # Check if S.No exists
+                # Extract student data
+                for row_idx, row_data in enumerate(sheet_data[1:], start=2):
+                    if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
+                        # Pad row_data with empty strings if needed
+                        while len(row_data) < len(headers):
+                            row_data.append('')
+                        
                         student = {
                             'sno': sno_counter,
                             'sheet_name': sheet_name,
-                            'row_number': row,
-                            'class_sno': sheet.cell(row=row, column=headers.get('Class_S.No', 2)).value,
-                            'gr_number': sheet.cell(row=row, column=headers.get('GR#', 3)).value,
-                            'student_name': sheet.cell(row=row, column=headers.get('Student Name', 4)).value,
-                            'father_name': sheet.cell(row=row, column=headers.get("Father's Name", 5)).value,
-                            'gender': sheet.cell(row=row, column=headers.get('Gender', 6)).value,
-                            'religion': sheet.cell(row=row, column=headers.get('Religion', 7)).value,
-                            'contact_number': sheet.cell(row=row, column=headers.get('Contact Number', 8)).value,
-                            'cnic_bform': sheet.cell(row=row, column=headers.get('CNIC / B-Form', 9)).value,
-                            'date_of_birth': sheet.cell(row=row, column=headers.get('Date of Birth', 10)).value,
-                            'father_mother_cnic': sheet.cell(row=row, column=headers.get("Father/Mother's CNIC", 11)).value,
-                            'guardian_name': sheet.cell(row=row, column=headers.get('Guardian Name', 12)).value,
-                            'guardian_cnic': sheet.cell(row=row, column=headers.get('Guardian CNIC', 13)).value,
-                            'guardian_relation': sheet.cell(row=row, column=headers.get('Guardian Relation', 14)).value,
-                            'student_class': sheet.cell(row=row, column=headers.get('Student Class', 15)).value or sheet_name.replace('Class_', ''),
-                            'class_section': sheet.cell(row=row, column=headers.get('Class Section', 16)).value
+                            'row_number': row_idx,
+                            'class_sno': row_data[header_indices.get('Class_S.No', 0)] if len(row_data) > header_indices.get('Class_S.No', 0) else '',
+                            'student_name': row_data[header_indices.get('Student Name', 2)] if len(row_data) > header_indices.get('Student Name', 2) else '',
+                            'father_name': row_data[header_indices.get("Father's Name", 3)] if len(row_data) > header_indices.get("Father's Name", 3) else '',
+                            'gr_number': row_data[header_indices.get('GR#', 1)] if len(row_data) > header_indices.get('GR#', 1) else '',
+                            'student_class': sheet_name.replace('Class_', ''),
+                            'class_section': row_data[header_indices.get('Class Section', 14)] if len(row_data) > header_indices.get('Class Section', 14) else '',
+                            'contact_number': row_data[header_indices.get('Contact Number', 6)] if len(row_data) > header_indices.get('Contact Number', 6) else '',
+                            'gender': row_data[header_indices.get('Gender', 4)] if len(row_data) > header_indices.get('Gender', 4) else '',
+                            'religion': row_data[header_indices.get('Religion', 5)] if len(row_data) > header_indices.get('Religion', 5) else '',
+                            'cnic_bform': row_data[header_indices.get('CNIC / B-Form', 7)] if len(row_data) > header_indices.get('CNIC / B-Form', 7) else '',
+                            'date_of_birth': row_data[header_indices.get('Date of Birth', 8)] if len(row_data) > header_indices.get('Date of Birth', 8) else '',
+                            'guardian_name': row_data[header_indices.get('Guardian Name', 10)] if len(row_data) > header_indices.get('Guardian Name', 10) else '',
+                            'guardian_relation': row_data[header_indices.get('Guardian Relation', 12)] if len(row_data) > header_indices.get('Guardian Relation', 12) else '',
+                            'remarks': row_data[header_indices.get('Remarks', 17)] if len(row_data) > header_indices.get('Remarks', 17) else ''
                         }
                         all_students.append(student)
                         sno_counter += 1
         
-        return jsonify({'success': True, 'students': all_students})
+        # Cache the result
+        data_cache.set_all_data(all_students)
+        
+        return jsonify({
+            'success': True,
+            'students': all_students,
+            'total_count': len(all_students),
+            'cached': False
+        })
+        
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({
+            'success': False,
+            'message': f'Error loading students: {str(e)}'
+        })
 
 @app.route('/api/student_details/<sheet_name>/<int:row_number>')
-@admin_required
-def api_student_details(sheet_name, row_number):
-    """API endpoint to get complete student details (Admin only)"""
-    try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
-        
-        sheet = data_entry.workbook[sheet_name]
-        
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
-        
-        # Get complete student data
-        student_details = {}
-        for header, col in headers.items():
-            cell_value = sheet.cell(row=row_number, column=col).value
-            student_details[header] = cell_value if cell_value is not None else 'N/A'
-        
-        return jsonify({'success': True, 'student': student_details})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/teacher_student_details/<sheet_name>/<int:row_number>')
 @login_required
-def api_teacher_student_details(sheet_name, row_number):
-    """API endpoint to get complete student details for teachers"""
-    user_access = session.get('access')
-    
-    # Extract class name from sheet name (e.g., "Class_I" -> "I")
-    class_name = sheet_name.replace('Class_', '')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
+def api_student_details(sheet_name, row_number):
+    """API endpoint to get student details"""
     try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
+        # Validate access
+        user_access = session.get('access')
+        if user_access != 'all' and user_access != sheet_name.replace('Class_', ''):
+            return jsonify({'success': False, 'message': 'Access denied'})
         
-        sheet = data_entry.workbook[sheet_name]
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        if not sheet_data or len(sheet_data) < row_number:
+            return jsonify({'success': False, 'message': 'Student not found'})
         
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
         
-        # Get complete student data
-        student_details = {}
-        for header, col in headers.items():
-            cell_value = sheet.cell(row=row_number, column=col).value
-            student_details[header] = cell_value if cell_value is not None else 'N/A'
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
         
-        return jsonify({'success': True, 'student': student_details})
+        # Create student dictionary
+        student = {}
+        for i, header in enumerate(headers):
+            student[header] = student_row[i] if i < len(student_row) else ''
+        
+        return jsonify({'success': True, 'student': student})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/edit_student/<sheet_name>/<int:row_number>', methods=['POST'])
 @login_required
 def api_edit_student(sheet_name, row_number):
-    """API endpoint to edit student details for teachers"""
-    user_access = session.get('access')
-    
-    # Extract class name from sheet name (e.g., "Class_I" -> "I")
-    class_name = sheet_name.replace('Class_', '')
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
+    """API endpoint to edit a student"""
     try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
+        # Get form data
+        student_data = request.get_json()
         
-        sheet = data_entry.workbook[sheet_name]
-        form_data = request.get_json()
+        # Validate access
+        user_access = session.get('access')
+        if user_access != 'all' and user_access != sheet_name.replace('Class_', ''):
+            return jsonify({'success': False, 'message': 'Access denied'})
         
-        # Get header row to find column indices
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
+        # Update student record
+        result = data_entry.update_student_record(sheet_name, row_number, student_data)
         
-        # Update student data (excluding GR# which should not be editable)
-        editable_fields = [
-            'Student Name', 'Father\'s Name', 'Gender', 'Religion', 
-            'Contact Number', 'CNIC / B-Form', 'Date of Birth', 
-            'Father/Mother\'s CNIC', 'Guardian Name', 'Guardian CNIC', 
-            'Guardian Relation', 'Student Class', 'Class Section', 
-            'Date of Admission'
-        ]
-        
-        for field in editable_fields:
-            if field in form_data and field in headers:
-                col = headers[field]
-                new_value = form_data[field]
-                
-                # Format CNIC numbers
-                if 'CNIC' in field and new_value and new_value != '-':
-                    new_value = data_entry.format_cnic(new_value)
-                
-                sheet.cell(row=row_number, column=col, value=new_value)
-        
-        # Save the workbook
-        data_entry.workbook.save(data_entry.excel_file)
-        
-        return jsonify({'success': True, 'message': 'Student details updated successfully'})
+        if result:
+            # Clear cache after update
+            data_cache.clear()
+            return jsonify({
+                'success': True,
+                'message': 'Student updated successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to update student'
+            })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({
+            'success': False,
+            'message': f'Error updating student: {str(e)}'
+        })
 
 @app.route('/api/delete_student/<sheet_name>/<int:row_number>', methods=['DELETE'])
 @admin_required
 def api_delete_student(sheet_name, row_number):
-    """API endpoint to delete a student from Excel file"""
+    """API endpoint to delete a student"""
     try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
-        
-        sheet = data_entry.workbook[sheet_name]
-        
-        # Check if row exists and has data
-        if row_number < 2 or row_number > sheet.max_row:
-            return jsonify({'success': False, 'message': 'Invalid row number'})
-        
-        if not sheet.cell(row=row_number, column=1).value:
-            return jsonify({'success': False, 'message': 'Student not found'})
-        
-        # Get student name for confirmation
-        student_name = sheet.cell(row=row_number, column=3).value  # Assuming column 3 is Student Name
-        
-        # Delete the row
-        sheet.delete_rows(row_number)
-        
-        # Update S.No for remaining students
-        sno_col = 1  # Assuming column 1 is S.No
-        current_sno = 1
-        for row in range(2, sheet.max_row + 1):
-            if sheet.cell(row=row, column=sno_col).value is not None:
-                sheet.cell(row=row, column=sno_col).value = current_sno
-                current_sno += 1
-        
-        # Save the workbook
-        data_entry.workbook.save(data_entry.excel_file)
-        
+        result = data_entry.delete_student_record(sheet_name, row_number)
+        if result:
+            # Clear cache after successful deletion
+            data_cache.clear()
+            return jsonify({
+                'success': True,
+                'message': 'Student deleted successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to delete student'
+            })
+    except Exception as e:
         return jsonify({
-            'success': True, 
-            'message': f'Student "{student_name}" has been deleted successfully'
+            'success': False,
+            'message': f'Error deleting student: {str(e)}'
+        })
+
+@app.route('/api/refresh_cache', methods=['POST'])
+@admin_required
+def api_refresh_cache():
+    """API endpoint to manually refresh cache"""
+    try:
+        data_cache.clear()
+        return jsonify({
+            'success': True,
+            'message': 'Cache refreshed successfully'
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/navigate_student/<sheet_name>/<int:row_number>/<direction>')
-@admin_required
-def api_navigate_student(sheet_name, row_number, direction):
-    """API endpoint to navigate to next/previous student"""
-    try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
-        
-        sheet = data_entry.workbook[sheet_name]
-        
-        if direction == 'next':
-            next_row = row_number + 1
-            while next_row <= sheet.max_row:
-                if sheet.cell(row=next_row, column=1).value is not None:
-                    return jsonify({'success': True, 'row_number': next_row})
-                next_row += 1
-            return jsonify({'success': False, 'message': 'No next student found'})
-        
-        elif direction == 'previous':
-            prev_row = row_number - 1
-            while prev_row >= 2:  # Start from row 2 (skip header)
-                if sheet.cell(row=prev_row, column=1).value is not None:
-                    return jsonify({'success': True, 'row_number': prev_row})
-                prev_row -= 1
-            return jsonify({'success': False, 'message': 'No previous student found'})
-        
-        else:
-            return jsonify({'success': False, 'message': 'Invalid direction'})
-    
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/get_student_name/<sheet_name>/<int:row_number>')
-@admin_required
-def api_get_student_name(sheet_name, row_number):
-    """API endpoint to get student name for delete confirmation"""
-    try:
-        if sheet_name not in data_entry.workbook.sheetnames:
-            return jsonify({'success': False, 'message': 'Sheet not found'})
-        
-        sheet = data_entry.workbook[sheet_name]
-        
-        if row_number < 2 or row_number > sheet.max_row:
-            return jsonify({'success': False, 'message': 'Invalid row number'})
-        
-        # Find Student Name column
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            header_value = sheet.cell(row=1, column=col).value
-            if header_value:
-                headers[header_value] = col
-        
-        if 'Student Name' not in headers:
-            return jsonify({'success': False, 'message': 'Student Name column not found'})
-        
-        student_name = sheet.cell(row=row_number, column=headers['Student Name']).value
-        
-        return jsonify({'success': True, 'student_name': student_name or 'Unknown'})
-    
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({
+            'success': False,
+            'message': f'Error refreshing cache: {str(e)}'
+        })
 
 @app.route('/student_details')
-@admin_required
+@login_required
 def student_details():
-    """Student details page (Admin only)"""
-    return render_template('student_details.html')
+    """Student details page"""
+    sheet_name = request.args.get('sheet')
+    row_number = request.args.get('row')
+    
+    if not sheet_name or not row_number:
+        flash('Invalid student reference', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        row_number = int(row_number)
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        
+        if not sheet_data or len(sheet_data) < row_number:
+            flash('Student not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student_data = dict(zip(headers, student_row))
+        
+        return render_template('student_details.html', 
+                             student=student_data, 
+                             sheet_name=sheet_name, 
+                             row_number=row_number)
+    except Exception as e:
+        flash(f'Error loading student details: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/print_student/<sheet_name>/<int:row_number>')
+@login_required
+def print_student(sheet_name, row_number):
+    """Print student details in A4 format"""
+    try:
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        
+        if not sheet_data or len(sheet_data) < row_number:
+            return jsonify({'success': False, 'message': 'Student not found'})
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student_data = dict(zip(headers, student_row))
+        
+        return render_template('print_student.html', 
+                             student=student_data, 
+                             sheet_name=sheet_name, 
+                             row_number=row_number)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/teacher_student_details')
 @login_required
 def teacher_student_details():
     """Teacher student details page"""
-    return render_template('teacher_student_details.html')
-
-@app.route('/teacher_student_edit')
-@login_required
-def teacher_student_edit():
-    """Teacher student edit page"""
-    return render_template('teacher_student_edit.html')
-
-@app.route('/api/consolidate_data', methods=['POST'])
-@admin_required
-def api_consolidate_data():
-    """Consolidate all student data and return as downloadable file"""
+    sheet_name = request.args.get('sheet')
+    row_number = request.args.get('row')
+    
+    if not sheet_name or not row_number:
+        flash('Invalid student reference', 'error')
+        return redirect(url_for('dashboard'))
+    
     try:
-        # Run the consolidation process
-        consolidate_student_data()
+        row_number = int(row_number)
+        sheet_data = data_entry.get_sheet_data(sheet_name)
         
-        # Check if the consolidated file was created
-        consolidated_file = '408070227.xlsx'
-        if os.path.exists(consolidated_file):
-            # Return the file for download
-            return send_file(
-                consolidated_file,
-                as_attachment=True,
-                download_name='408070227.xlsx',
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-        else:
-            return jsonify({'error': 'Consolidated file not found'}), 500
-            
+        if not sheet_data or len(sheet_data) < row_number:
+            flash('Student not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student_data = dict(zip(headers, student_row))
+        
+        return render_template('teacher_student_details.html', 
+                             student=student_data, 
+                             sheet_name=sheet_name, 
+                             row_number=row_number)
     except Exception as e:
-        return jsonify({'error': f'Consolidation failed: {str(e)}'}), 500
-
-@app.route('/settings')
-@admin_required
-def settings():
-    """Settings page (placeholder)"""
-    return "<h1>Settings</h1><p>This feature will be implemented soon.</p><a href='/dashboard'>← Back to Dashboard</a>"
+        flash(f'Error loading student details: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist

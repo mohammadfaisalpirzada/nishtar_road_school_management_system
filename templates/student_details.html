@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Details - Student Data Management</title>
+    <title>Student Details - {{ student.get('Student Name', 'Unknown') }}</title>
     <style>
         * {
             margin: 0;
@@ -13,738 +13,522 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #8B0000 0%, #4169E1 100%);
             min-height: 100vh;
-            overflow-x: hidden;
+            color: #333;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .header h1 {
-            font-size: 1.8rem;
-        }
-
-        .header-controls {
+        .header-content {
             display: flex;
-            gap: 1rem;
+            justify-content: space-between;
             align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .back-btn, .edit-btn, .delete-btn {
-            background: rgba(255,255,255,0.2);
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-title h1 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            color: #718096;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #8B0000, #4169E1);
             color: white;
             border: none;
             padding: 0.5rem 1rem;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             text-decoration: none;
-            transition: background 0.3s ease;
             font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .back-btn:hover, .edit-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        .delete-btn {
-            background: rgba(220, 53, 69, 0.8);
-        }
-
-        .delete-btn:hover {
-            background: rgba(220, 53, 69, 1);
-        }
-
-        .edit-btn.active {
-            background: rgba(40, 167, 69, 0.8);
+        .back-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
         }
 
         .container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            position: relative;
-        }
-
-        .swipe-container {
-            position: relative;
-            overflow: hidden;
-            touch-action: pan-y;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
         }
 
         .student-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-            position: relative;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
         }
 
         .student-header {
+            background: linear-gradient(135deg, #8B0000, #4169E1);
+            color: white;
+            padding: 2rem;
             text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #667eea;
+        }
+
+        .student-avatar {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            border: 4px solid rgba(255, 255, 255, 0.3);
         }
 
         .student-name {
             font-size: 2rem;
-            color: #333;
+            font-weight: 700;
             margin-bottom: 0.5rem;
         }
 
         .student-class {
-            font-size: 1.2rem;
-            color: #667eea;
-            font-weight: 500;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
         }
 
-        .navigation-hint {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 3rem;
-            color: rgba(102, 126, 234, 0.3);
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+        .student-gr {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
         }
 
-        .nav-left {
-            left: -60px;
+        .student-content {
+            padding: 2rem;
         }
 
-        .nav-right {
-            right: -60px;
-        }
-
-        .details-grid {
+        .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
-        .detail-section {
+        .info-section {
             background: #f8f9fa;
             padding: 1.5rem;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-radius: 12px;
+            border-left: 4px solid #4169E1;
         }
 
         .section-title {
             font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 1rem;
             font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .detail-item {
+        .info-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e9ecef;
             align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .detail-item:last-child {
-            margin-bottom: 0;
+        .info-item:last-child {
             border-bottom: none;
         }
 
-        .detail-label {
-            font-weight: 500;
-            color: #555;
-            flex: 1;
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 120px;
         }
 
-        .detail-value {
-            color: #333;
-            flex: 1;
+        .info-value {
+            color: #2d3748;
             text-align: right;
-        }
-
-        .detail-input {
             flex: 1;
-            text-align: right;
-            border: none;
-            background: transparent;
-            color: #333;
-            font-size: inherit;
-            font-family: inherit;
-            padding: 0.25rem;
-            border-radius: 3px;
-            transition: background 0.3s ease;
+            margin-left: 1rem;
         }
 
-        .detail-input:focus {
-            outline: none;
-            background: rgba(102, 126, 234, 0.1);
-            border: 1px solid #667eea;
+        .actions-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .detail-input.saving {
-            background: rgba(40, 167, 69, 0.1);
-            border: 1px solid #28a745;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: #666;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border: 1px solid #f5c6cb;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border: 1px solid #c3e6cb;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 15% auto;
-            padding: 2rem;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .modal h3 {
-            color: #dc3545;
-            margin-bottom: 1rem;
-        }
-
-        .modal input {
-            width: 100%;
-            padding: 0.75rem;
-            margin: 1rem 0;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        .modal input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .modal-buttons {
+        .action-buttons {
             display: flex;
             gap: 1rem;
+            flex-wrap: wrap;
             justify-content: center;
-            margin-top: 1rem;
         }
 
-        .modal-btn {
+        .action-btn {
             padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.3s ease;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
         }
 
-        .modal-btn.confirm {
-            background: #dc3545;
+        .btn-edit {
+            background: linear-gradient(135deg, #4169E1, #8B0000);
             color: white;
         }
 
-        .modal-btn.confirm:hover {
-            background: #c82333;
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(65, 105, 225, 0.3);
         }
 
-        .modal-btn.cancel {
-            background: #6c757d;
+        .btn-delete {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
             color: white;
         }
 
-        .modal-btn.cancel:hover {
-            background: #5a6268;
+        .btn-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+
+        .empty-value {
+            color: #a0aec0;
+            font-style: italic;
         }
 
         @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
             .container {
-                padding: 0 1rem;
+                padding: 0.5rem;
             }
-            
-            .details-grid {
-                grid-template-columns: 1fr;
+
+            .student-header {
+                padding: 1.5rem;
             }
-            
+
+            .student-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+
             .student-name {
                 font-size: 1.5rem;
             }
 
-            .header-controls {
+            .student-content {
+                padding: 1rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .info-item {
                 flex-direction: column;
+                align-items: flex-start;
                 gap: 0.5rem;
             }
 
-            .back-btn, .edit-btn, .delete-btn {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.8rem;
+            .info-value {
+                text-align: left;
+                margin-left: 0;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                justify-content: center;
+            }
+        }
+
+        .phone-link {
+            color: #4169E1 !important;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .phone-link:hover {
+            color: #8B0000 !important;
+            text-decoration: underline;
+        }
+
+        .remarks-section {
+            margin-top: 1rem;
+        }
+
+        .remarks-content {
+            padding: 1rem;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .header, .actions-section {
+                display: none;
+            }
+            
+            .student-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
             }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📋 Student Details</h1>
-        <div class="header-controls">
-            <button onclick="toggleEditMode()" class="edit-btn" id="edit-btn">✏️ Edit</button>
-            <button onclick="showDeleteModal()" class="delete-btn" id="delete-btn">🗑️ Delete</button>
-            <button onclick="goBack()" class="back-btn">← Back</button>
+        <div class="header-content">
+            <div class="header-title">
+                <div>
+                    <h1>👤 Student Details</h1>
+                    <div class="header-subtitle">Govt Girls Secondary School Nishtar Road Khi</div>
+                </div>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="back-btn">
+                ← Back to Dashboard
+            </a>
         </div>
     </div>
 
     <div class="container">
-        <div id="loading" class="loading">
-            <p>Loading student details...</p>
-        </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
-        <div id="success" class="success" style="display: none;"></div>
-        
-        <div class="swipe-container" id="swipe-container">
-            <div class="navigation-hint nav-left" id="nav-left">←</div>
-            <div class="navigation-hint nav-right" id="nav-right">→</div>
-            <div id="student-details" class="student-card" style="display: none;">
-                <!-- Student details will be loaded here -->
+        <div class="student-card">
+            <div class="student-header">
+                <div class="student-avatar">
+                    {% if student.get('Gender') == 'Male' %}
+                        👦
+                    {% elif student.get('Gender') == 'Female' %}
+                        👧
+                    {% else %}
+                        👤
+                    {% endif %}
+                </div>
+                <div class="student-name">{{ student.get('Student Name', 'Unknown Student') }}</div>
+                <div class="student-class">Class {{ student.get('Student Class', 'N/A') }} - {{ student.get('Class Section', 'N/A') }}</div>
+                <div class="student-gr">GR# {{ student.get('GR#', 'N/A') }}</div>
+            </div>
+
+            <div class="student-content">
+                <div class="info-grid">
+                    <!-- Personal Information -->
+                    <div class="info-section">
+                        <div class="section-title">👤 Personal Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Full Name:</span>
+                            <span class="info-value">{{ student.get('Student Name', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Father's Name:</span>
+                            <span class="info-value">{{ student.get("Father's Name", 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Gender:</span>
+                            <span class="info-value">{{ student.get('Gender', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Religion:</span>
+                            <span class="info-value">{{ student.get('Religion', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Date of Birth:</span>
+                            <span class="info-value">{{ student.get('Date of Birth', 'N/A') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Academic Information -->
+                    <div class="info-section">
+                        <div class="section-title">📚 Academic Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Class:</span>
+                            <span class="info-value">{{ student.get('Student Class', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Section:</span>
+                            <span class="info-value">{{ student.get('Class Section', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">GR Number:</span>
+                            <span class="info-value">{{ student.get('GR#', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Class S.No:</span>
+                            <span class="info-value">{{ student.get('Class_S.No', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">SEMIS Code:</span>
+                            <span class="info-value">{{ student.get('SEMIS Code', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Admission Date:</span>
+                            <span class="info-value">{{ student.get('Date of Admission', 'N/A') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="info-section">
+                        <div class="section-title">📞 Contact Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Contact Number:</span>
+                            <span class="info-value">
+                                {% if student.get('Contact Number') and student.get('Contact Number') != 'N/A' %}
+                                    <a href="tel:{{ student.get('Contact Number') }}" class="phone-link">
+                                        📞 {{ student.get('Contact Number') }}
+                                    </a>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">CNIC/B-Form:</span>
+                            <span class="info-value">{{ student.get('CNIC / B-Form', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Parent CNIC:</span>
+                            <span class="info-value">{{ student.get("Father/Mother's CNIC", 'N/A') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Guardian Information -->
+                    <div class="info-section">
+                        <div class="section-title">👨‍👩‍👧‍👦 Guardian Information</div>
+                        <div class="info-item">
+                            <span class="info-label">Guardian Name:</span>
+                            <span class="info-value">{{ student.get('Guardian Name', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Guardian CNIC:</span>
+                            <span class="info-value">{{ student.get('Guardian CNIC', 'N/A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Relation:</span>
+                            <span class="info-value">{{ student.get('Guardian Relation', 'N/A') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remarks Section -->
+                {% if student.get('Remarks') %}
+                <div class="info-section remarks-section">
+                    <div class="section-title">📝 Remarks</div>
+                    <div class="remarks-content">
+                        {{ student.get('Remarks', 'No remarks') }}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-    </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="modal">
-        <div class="modal-content">
-            <h3>⚠️ Confirm Delete</h3>
-            <p>To delete this student, please type the student's name exactly as shown:</p>
-            <p><strong id="student-name-display"></strong></p>
-            <input type="text" id="delete-confirmation-input" placeholder="Type student name here...">
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" onclick="hideDeleteModal()">Cancel</button>
-                <button class="modal-btn confirm" onclick="confirmDelete()">Delete</button>
+        <!-- Action Buttons -->
+        <div class="actions-section">
+            <div class="action-buttons">
+                <a href="/admin_student_edit?sheet={{ sheet_name }}&row={{ row_number }}" class="action-btn btn-edit">
+                    ✏️ Edit Student
+                </a>
+                <button onclick="deleteStudent('{{ sheet_name }}', {{ row_number }}, '{{ student.get('Student Name', 'Unknown') }}')" class="action-btn btn-delete">
+                    🗑️ Delete Student
+                </button>
+                <button onclick="printStudent()" class="action-btn btn-print">
+                    🖨️ Print Details
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentStudent = null;
-        let currentSheetName = null;
-        let currentRowNumber = null;
-        let isEditMode = false;
-        let touchStartX = 0;
-        let touchEndX = 0;
-        let saveTimeout = null;
-
-        function goBack() {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = '/dashboard';
-            }
-        }
-
-        function showSuccess(message) {
-            const successDiv = document.getElementById('success');
-            successDiv.textContent = message;
-            successDiv.style.display = 'block';
-            setTimeout(() => {
-                successDiv.style.display = 'none';
-            }, 3000);
-        }
-
-        function showError(message) {
-            document.getElementById('loading').style.display = 'none';
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            const editBtn = document.getElementById('edit-btn');
-            
-            if (isEditMode) {
-                editBtn.textContent = '💾 Save Mode';
-                editBtn.classList.add('active');
-                enableEditMode();
-            } else {
-                editBtn.textContent = '✏️ Edit';
-                editBtn.classList.remove('active');
-                disableEditMode();
-            }
-        }
-
-        function enableEditMode() {
-            const detailValues = document.querySelectorAll('.detail-value');
-            detailValues.forEach((element, index) => {
-                const fieldName = element.getAttribute('data-field');
-                if (fieldName && fieldName !== 'GR#' && fieldName !== 'Class_S.No') {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'detail-input';
-                    input.value = element.textContent === 'N/A' ? '' : element.textContent;
-                    input.setAttribute('data-field', fieldName);
-                    input.addEventListener('input', handleInputChange);
-                    element.parentNode.replaceChild(input, element);
-                }
-            });
-        }
-
-        function disableEditMode() {
-            const detailInputs = document.querySelectorAll('.detail-input');
-            detailInputs.forEach(input => {
-                const span = document.createElement('span');
-                span.className = 'detail-value';
-                span.textContent = input.value || 'N/A';
-                span.setAttribute('data-field', input.getAttribute('data-field'));
-                input.parentNode.replaceChild(span, input);
-            });
-        }
-
-        function handleInputChange(event) {
-            const input = event.target;
-            input.classList.add('saving');
-            
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveFieldData(input);
-            }, 1000); // Auto-save after 1 second of no typing
-        }
-
-        function saveFieldData(input) {
-            const fieldName = input.getAttribute('data-field');
-            const fieldValue = input.value;
-            
-            const updateData = {};
-            updateData[fieldName] = fieldValue;
-            
-            fetch(`/api/edit_student/${currentSheetName}/${currentRowNumber}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updateData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                input.classList.remove('saving');
-                if (data.success) {
-                    // Update current student data
-                    currentStudent[fieldName] = fieldValue;
-                    showSuccess('Field saved successfully');
-                } else {
-                    showError(data.message || 'Failed to save field');
-                }
-            })
-            .catch(error => {
-                input.classList.remove('saving');
-                showError('Error saving field: ' + error.message);
-            });
-        }
-
-        function loadStudentDetails() {
-            const urlParams = new URLSearchParams(window.location.search);
-            currentSheetName = urlParams.get('sheet');
-            currentRowNumber = parseInt(urlParams.get('row'));
-            
-            if (!currentSheetName || !currentRowNumber) {
-                showError('Invalid student parameters');
-                return;
-            }
-            
-            fetch(`/api/student_details/${currentSheetName}/${currentRowNumber}`)
+        function deleteStudent(sheetName, rowNumber, studentName) {
+            if (confirm(`Are you sure you want to delete student "${studentName}"?\n\nThis action cannot be undone and will permanently remove the student from the database.`)) {
+                fetch(`/api/delete_student/${encodeURIComponent(sheet_name)}/${rowNumber}`, {
+                    method: 'DELETE'
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        currentStudent = data.student;
-                        displayStudentDetails(data.student);
-                        setupSwipeNavigation();
+                        alert('Student deleted successfully!');
+                        window.location.href = '/admin_dashboard';
                     } else {
-                        showError(data.message || 'Failed to load student details');
+                        alert('Error: ' + data.message);
                     }
                 })
                 .catch(error => {
-                    showError('Error loading student details: ' + error.message);
+                    alert('Error deleting student: ' + error.message);
                 });
-        }
-
-        function displayStudentDetails(student) {
-            document.getElementById('loading').style.display = 'none';
-            
-            const detailsContainer = document.getElementById('student-details');
-            detailsContainer.style.display = 'block';
-            
-            const editableFields = [
-                'Student Name', 'Father\'s Name', 'Gender', 'Religion', 
-                'Contact Number', 'CNIC / B-Form', 'Date of Birth', 
-                'Father/Mother\'s CNIC', 'Guardian Name', 'Guardian CNIC', 
-                'Guardian Relation', 'Student Class', 'Class Section', 
-                'Date of Admission', 'SEMIS Code'
-            ];
-            
-            detailsContainer.innerHTML = `
-                <div class="student-header">
-                    <div class="student-name">${student['Student Name'] || 'N/A'}</div>
-                    <div class="student-class">Class ${student['Student Class'] || 'N/A'} - ${student['Class Section'] || 'N/A'} Section</div>
-                </div>
-                
-                <div class="details-grid">
-                    <div class="detail-section">
-                        <div class="section-title">Basic Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Class S.No:</span>
-                            <span class="detail-value" data-field="Class_S.No">${student['Class_S.No'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">GR Number:</span>
-                            <span class="detail-value" data-field="GR#">${student['GR#'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Student Name:</span>
-                            <span class="detail-value" data-field="Student Name">${student['Student Name'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gender:</span>
-                            <span class="detail-value" data-field="Gender">${student['Gender'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Date of Birth:</span>
-                            <span class="detail-value" data-field="Date of Birth">${student['Date of Birth'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Religion:</span>
-                            <span class="detail-value" data-field="Religion">${student['Religion'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Family Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Father's Name:</span>
-                            <span class="detail-value" data-field="Father's Name">${student["Father's Name"] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Contact Number:</span>
-                            <span class="detail-value" data-field="Contact Number">${student['Contact Number'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Father/Mother's CNIC:</span>
-                            <span class="detail-value" data-field="Father/Mother's CNIC">${student["Father/Mother's CNIC"] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian Name:</span>
-                            <span class="detail-value" data-field="Guardian Name">${student['Guardian Name'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian CNIC:</span>
-                            <span class="detail-value" data-field="Guardian CNIC">${student['Guardian CNIC'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Guardian Relation:</span>
-                            <span class="detail-value" data-field="Guardian Relation">${student['Guardian Relation'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Academic Information</div>
-                        <div class="detail-item">
-                            <span class="detail-label">Student Class:</span>
-                            <span class="detail-value" data-field="Student Class">${student['Student Class'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Class Section:</span>
-                            <span class="detail-value" data-field="Class Section">${student['Class Section'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">SEMIS Code:</span>
-                            <span class="detail-value" data-field="SEMIS Code">${student['SEMIS Code'] || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Date of Admission:</span>
-                            <span class="detail-value" data-field="Date of Admission">${student['Date of Admission'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <div class="section-title">Documents</div>
-                        <div class="detail-item">
-                            <span class="detail-label">CNIC / B-Form:</span>
-                            <span class="detail-value" data-field="CNIC / B-Form">${student['CNIC / B-Form'] || 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function setupSwipeNavigation() {
-            const swipeContainer = document.getElementById('swipe-container');
-            
-            swipeContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            swipeContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
-        }
-
-        function handleTouchStart(event) {
-            touchStartX = event.changedTouches[0].screenX;
-        }
-
-        function handleTouchEnd(event) {
-            touchEndX = event.changedTouches[0].screenX;
-            handleSwipe();
-        }
-
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const swipeDistance = touchEndX - touchStartX;
-            
-            if (Math.abs(swipeDistance) > swipeThreshold) {
-                if (swipeDistance > 0) {
-                    // Swipe right - show previous student
-                    navigateStudent('previous');
-                } else {
-                    // Swipe left - show next student
-                    navigateStudent('next');
-                }
             }
         }
-
-        function navigateStudent(direction) {
-            if (isEditMode) {
-                showError('Please exit edit mode before navigating');
-                return;
-            }
+        
+        function printStudent() {
+            // Open print page in new window with auto-print
+            const printUrl = `/print_student/{{ sheet_name }}/{{ row_number }}?autoprint=true`;
+            const printWindow = window.open(printUrl, '_blank', 'width=800,height=600');
             
-            const navHint = document.getElementById(direction === 'next' ? 'nav-right' : 'nav-left');
-            navHint.style.opacity = '1';
-            
-            fetch(`/api/navigate_student/${currentSheetName}/${currentRowNumber}/${direction}`)
-                .then(response => response.json())
-                .then(data => {
-                    navHint.style.opacity = '0';
-                    if (data.success) {
-                        currentRowNumber = data.row_number;
-                        // Update URL without page reload
-                        const newUrl = `${window.location.pathname}?sheet=${currentSheetName}&row=${currentRowNumber}`;
-                        window.history.replaceState({}, '', newUrl);
-                        loadStudentDetails();
-                    } else {
-                        showError(data.message);
-                    }
-                })
-                .catch(error => {
-                    navHint.style.opacity = '0';
-                    showError('Navigation error: ' + error.message);
-                });
-        }
-
-        function showDeleteModal() {
-            fetch(`/api/get_student_name/${currentSheetName}/${currentRowNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('student-name-display').textContent = data.student_name;
-                        document.getElementById('delete-modal').style.display = 'block';
-                        document.getElementById('delete-confirmation-input').value = '';
-                        document.getElementById('delete-confirmation-input').focus();
-                    } else {
-                        showError(data.message);
-                    }
-                })
-                .catch(error => {
-                    showError('Error getting student name: ' + error.message);
-                });
-        }
-
-        function hideDeleteModal() {
-            document.getElementById('delete-modal').style.display = 'none';
-        }
-
-        function confirmDelete() {
-            const expectedName = document.getElementById('student-name-display').textContent;
-            const enteredName = document.getElementById('delete-confirmation-input').value.trim();
-            
-            if (enteredName !== expectedName) {
-                showError('Student name does not match. Please type the exact name.');
-                return;
-            }
-            
-            fetch(`/api/delete_student/${currentSheetName}/${currentRowNumber}`, {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideDeleteModal();
-                if (data.success) {
-                    showSuccess(data.message);
-                    setTimeout(() => {
-                        goBack();
-                    }, 2000);
-                } else {
-                    showError(data.message);
-                }
-            })
-            .catch(error => {
-                hideDeleteModal();
-                showError('Delete error: ' + error.message);
-            });
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('delete-modal');
-            if (event.target === modal) {
-                hideDeleteModal();
+            // Focus on the new window
+            if (printWindow) {
+                printWindow.focus();
             }
         }
-
-        // Handle Enter key in delete confirmation input
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('delete-confirmation-input').addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') {
-                    confirmDelete();
-                }
-            });
-            
-            loadStudentDetails();
-        });
     </script>
 </body>
 </html>

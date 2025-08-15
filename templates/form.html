@@ -32,6 +32,7 @@
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
         }
         
         .header h1 {
@@ -190,6 +191,32 @@
             color: #666;
             margin-top: 3px;
         }
+
+        /* Back button for desktop users */
+        .back-btn {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: none; /* hidden on small screens */
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        @media (min-width: 768px) {
+            .back-btn { display: inline-flex; }
+        }
     </style>
 </head>
 <body>
@@ -198,6 +225,7 @@
             <h2 style="font-size: 1.2em; margin-bottom: 10px; font-weight: 600;">G.G.S.S Nishtar Road</h2>
             <h1>📱 Student Data Entry</h1>
             <p id="class-sno-display">Select class to see next Class S.No</p>
+            <a href="{{ url_for('admin_dashboard') }}" id="backBtn" class="back-btn">⬅ Back to Dashboard</a>
         </div>
         
         <div class="form-container">
@@ -449,6 +477,20 @@
             const selectedClass = this.value;
             updateNextClassSNo(selectedClass);
         });
+
+        // Prefetch next class serial numbers for all classes to reduce latency
+        let nextClassSnos = null;
+        function prefetchNextSnos(){
+            if (nextClassSnos) return; // already fetched
+            fetch('/api/next_class_snos')
+                .then(r => r.json())
+                .then(data => { if (data.success) nextClassSnos = data.next_snos; })
+                .catch(()=>{});
+        }
+        // Fetch on load
+        window.addEventListener('DOMContentLoaded', prefetchNextSnos);
+        // Also fetch when the class select gains focus (user intent)
+        document.getElementById('student_class').addEventListener('focus', prefetchNextSnos);
         
         // Date of birth combination
         function updateDateOfBirth() {
@@ -469,20 +511,28 @@
         document.getElementById('birth_month').addEventListener('change', updateDateOfBirth);
         document.getElementById('birth_year').addEventListener('change', updateDateOfBirth);
         
-        // GR number validation
-        document.getElementById('gr_number').addEventListener('blur', function() {
-            const grNumber = this.value;
-            if (grNumber) {
-                fetch(`/check_gr/${grNumber}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.exists) {
-                            showMessage('GR# ' + grNumber + ' already exists!', 'error');
-                            this.focus();
-                        }
-                    });
-            }
-        });
+        // Debounced GR number validation to avoid repeated calls
+        (function(){
+            const grInput = document.getElementById('gr_number');
+            let timer = null;
+            const delay = 500; // ms
+            grInput.addEventListener('input', function(){
+                if (timer) clearTimeout(timer);
+                const value = this.value;
+                timer = setTimeout(() => {
+                    if (!value) return;
+                    fetch(`/check_gr/${value}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.exists) {
+                                showMessage('GR# ' + value + ' already exists!', 'error');
+                                grInput.focus();
+                            }
+                        })
+                        .catch(()=>{});
+                }, delay);
+            });
+        })();
         
         // Form submission
         document.getElementById('studentForm').addEventListener('submit', function(e) {
@@ -569,7 +619,46 @@
             
             // Reset class S.No display
             document.getElementById('class-sno-display').textContent = 'Select class to see next Class S.No';
+            // Mark form as clean
+            formDirty = false;
         }
+
+        // Track unsaved changes
+        let formDirty = false;
+        (function setupDirtyTracking(){
+            const form = document.getElementById('studentForm');
+            if (!form) return;
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(el => {
+                el.addEventListener('change', () => { formDirty = true; });
+                el.addEventListener('input', () => { formDirty = true; });
+            });
+            // When form is submitted successfully, clear the dirty flag in finally block of submit handler
+        })();
+
+        // Back to Dashboard with confirmation when unsaved changes exist
+        const backBtn = document.getElementById('backBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function(e){
+                if (formDirty) {
+                    const ok = confirm('You have unsaved changes. Leave without saving?');
+                    if (!ok) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+                // proceed to dashboard
+                return true;
+            });
+        }
+
+        // Warn on page unload if there are unsaved changes
+        window.addEventListener('beforeunload', function (e) {
+            if (formDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
     </script>
     
     <!-- Developer Footer -->
