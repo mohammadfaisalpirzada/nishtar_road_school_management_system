@@ -9,7 +9,48 @@ import threading
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_file
 from google_sheets_data_entry import GoogleSheetsDataEntry
-from config import USERS, SECRET_KEY, APP_CONFIG, authenticate_user
+
+# Try to import local config.py; if missing (for example not committed to the repo),
+# fall back to reading required values from environment variables so the app can
+# still start on platforms like Railway. This avoids a hard crash during import.
+try:
+    from config import USERS, SECRET_KEY, APP_CONFIG, authenticate_user
+except Exception as e:
+    print(f"Warning: failed to import config.py: {e}. Falling back to environment-based config.")
+    # Build minimal USERS dictionary from environment variables (unsafe defaults for quick deploy)
+    admin_pw = os.environ.get('ADMIN_PASSWORD', os.environ.get('ADMIN_PW', 'admin'))
+    USERS = {
+        'admin': {
+            'password': admin_pw,
+            'role': 'admin',
+            'access': 'all'
+        }
+    }
+
+    # Secret key from env or a default (override in Railway env vars)
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
+
+    # Minimal APP_CONFIG defaults
+    APP_CONFIG = {
+        'debug': os.environ.get('FLASK_DEBUG', 'False').lower() == 'true',
+        'host': os.environ.get('FLASK_HOST', '0.0.0.0'),
+        'port': int(os.environ.get('FLASK_PORT', 5000)),
+        'cache_duration': int(os.environ.get('CACHE_DURATION', 300)),
+        'session_timeout': int(os.environ.get('SESSION_TIMEOUT', 3600))
+    }
+
+    def authenticate_user(username, password):
+        """Fallback authenticator using simple env-provided credentials.
+
+        In production you should provide a `config.py` or set proper environment
+        variables and avoid default weak passwords.
+        """
+        user = USERS.get(username)
+        if not user:
+            return None
+        if user.get('password') == password:
+            return user.copy()
+        return None
 import os
 from functools import wraps
 from dotenv import load_dotenv
