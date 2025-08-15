@@ -9,12 +9,14 @@ import threading
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_file
 from google_sheets_data_entry import GoogleSheetsDataEntry
+import os
 
 # Try to import local config.py; if missing (for example not committed to the repo),
 # fall back to reading required values from environment variables so the app can
 # still start on platforms like Railway. This avoids a hard crash during import.
 try:
     from config import USERS, SECRET_KEY, APP_CONFIG, authenticate_user
+    CONFIG_SOURCE = 'config.py'
 except Exception as e:
     print(f"Warning: failed to import config.py: {e}. Falling back to environment-based config.")
     # Build minimal USERS dictionary from environment variables (unsafe defaults for quick deploy)
@@ -51,7 +53,28 @@ except Exception as e:
         if user.get('password') == password:
             return user.copy()
         return None
-import os
+
+# Startup summary helper
+def _mask(val):
+    if not val:
+        return '<empty>'
+    s = str(val)
+    if len(s) <= 6:
+        return '******'
+    return s[:3] + '...' + s[-3:]
+
+def print_startup_summary():
+    source = globals().get('CONFIG_SOURCE', 'env')
+    enabled = os.environ.get('ENABLE_BACKGROUND_SYNC', 'False').lower() in ('1', 'true', 'yes')
+    use_sheets = os.environ.get('USE_GOOGLE_SHEETS', 'False').lower() in ('1', 'true', 'yes')
+    print('----- Startup Summary -----')
+    print(f'CONFIG_SOURCE: {source}')
+    print(f'DEBUG: {APP_CONFIG.get("debug", False)}')
+    print(f'ENABLE_BACKGROUND_SYNC: {enabled}')
+    print(f'USE_GOOGLE_SHEETS: {use_sheets}')
+    print(f'SECRET_KEY: {_mask(SECRET_KEY)}')
+    print('---------------------------')
+
 from functools import wraps
 from dotenv import load_dotenv
 import importlib
@@ -194,9 +217,24 @@ def background_sync():
             print(f"❌ Background sync error: {e}")
             time.sleep(60)  # Wait 1 minute on error
 
-# Start background sync thread
-sync_thread = threading.Thread(target=background_sync, daemon=True)
-sync_thread.start()
+def start_background_sync_if_needed():
+        """Start the background sync thread only when appropriate.
+
+        - If running as the main module (development), start it.
+        - If the environment variable ENABLE_BACKGROUND_SYNC is set to true, start it
+            (useful if you intentionally want the sync running under your process manager).
+        This avoids spinning up background threads in every Gunicorn worker by default.
+        """
+        enabled = os.environ.get('ENABLE_BACKGROUND_SYNC', 'False').lower() in ('1', 'true', 'yes')
+        if __name__ == '__main__' or enabled:
+                print(f"Starting background sync (enabled={enabled}, __name__={__name__})")
+                sync_thread = threading.Thread(target=background_sync, daemon=True)
+                sync_thread.start()
+        else:
+                print("Background sync not started (set ENABLE_BACKGROUND_SYNC=true to enable under WSGI).")
+
+# Attempt to start background sync only when appropriate
+start_background_sync_if_needed()
 
 @app.route('/')
 def index():
