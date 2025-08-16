@@ -30,7 +30,7 @@
         .header {
             background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
-            padding: 20px;
+            padding: 20px 120px 20px 20px;
             text-align: center;
             position: relative;
         }
@@ -195,27 +195,41 @@
         /* Back button for desktop users */
         .back-btn {
             position: absolute;
-            right: 16px;
-            top: 16px;
-            background: rgba(255,255,255,0.15);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
+            right: 20px;
+            top: 15px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            padding: 8px 14px;
+            border-radius: 6px;
             text-decoration: none;
             font-weight: 600;
-            display: none; /* hidden on small screens */
+            font-size: 13px;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            border: 1px solid rgba(255,255,255,0.12);
+            gap: 6px;
+            border: 1px solid rgba(0,0,0,0.15);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            z-index: 100;
+            white-space: nowrap;
         }
 
         .back-btn:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,1);
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
-        @media (min-width: 768px) {
-            .back-btn { display: inline-flex; }
+        @media (max-width: 767px) {
+            .header {
+                padding: 20px;
+            }
+            
+            .back-btn {
+                position: static;
+                margin: 10px auto;
+                display: inline-flex;
+                width: fit-content;
+            }
         }
     </style>
 </head>
@@ -225,7 +239,13 @@
             <h2 style="font-size: 1.2em; margin-bottom: 10px; font-weight: 600;">G.G.S.S Nishtar Road</h2>
             <h1>📱 Student Data Entry</h1>
             <p id="class-sno-display">Select class to see next Class S.No</p>
-            <a href="{{ url_for('admin_dashboard') }}" id="backBtn" class="back-btn">⬅ Back to Dashboard</a>
+            {% if user_role == 'admin' %}
+                <a href="{{ url_for('admin_dashboard') }}" id="backBtn" class="back-btn">⬅ Back to Dashboard</a>
+            {% elif selected_class %}
+                <a href="{{ url_for('class_dashboard', class_name=selected_class) }}" id="backBtn" class="back-btn">⬅ Back to Class {{ selected_class }}</a>
+            {% else %}
+                <a href="{{ url_for('dashboard') }}" id="backBtn" class="back-btn">⬅ Back to Dashboard</a>
+            {% endif %}
         </div>
         
         <div class="form-container">
@@ -510,6 +530,24 @@
         document.getElementById('birth_day').addEventListener('change', updateDateOfBirth);
         document.getElementById('birth_month').addEventListener('change', updateDateOfBirth);
         document.getElementById('birth_year').addEventListener('change', updateDateOfBirth);
+        
+        // Auto-populate class field if selected_class is provided
+        {% if selected_class %}
+        document.addEventListener('DOMContentLoaded', function() {
+            const classSelect = document.getElementById('student_class');
+            if (classSelect) {
+                classSelect.value = '{{ selected_class }}';
+                // Trigger change event to update next class S.No
+                classSelect.dispatchEvent(new Event('change'));
+                // Make the field readonly for teachers
+                {% if user_role == 'teacher' %}
+                classSelect.disabled = true;
+                classSelect.style.backgroundColor = '#f8f9fa';
+                classSelect.style.color = '#6c757d';
+                {% endif %}
+            }
+        });
+        {% endif %}
         
         // Debounced GR number validation to avoid repeated calls
         (function(){

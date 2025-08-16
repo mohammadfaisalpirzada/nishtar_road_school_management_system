@@ -444,7 +444,7 @@
         <div class="actions-section">
             <h2 class="section-title">Quick Actions</h2>
             <div class="action-grid">
-                <a href="{{ url_for('form') }}" class="action-btn">
+                <a href="{{ url_for('form', class_name=class_name) }}" class="action-btn">
                     <span class="icon">➕</span>
                     <span>Add New Student</span>
                 </a>
@@ -517,7 +517,7 @@
                                         <td data-label="Remarks" style="font-style: italic;">${student.remarks || 'N/A'}</td>
                                         <td data-label="Actions">
                                             <button onclick="viewStudent('Class_${className}', ${student.row_number})" style="background: #007bff; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">View</button>
-                                            <button onclick="editStudent('${student.sno}')" style="background: #28a745; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">Edit</button>
+                                            <button onclick="editStudent(${student.row_number})" style="background: #28a745; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; margin-right: 0.25rem;">Edit</button>
                                             ${userRole === 'admin' ? `<button onclick="deleteStudent('Class_${className}', ${student.row_number}, '${student.student_name}')" style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer;">Delete</button>` : ''}
                                         </td>
                                     </tr>
@@ -736,36 +736,12 @@
             }
         }
 
-        function editStudent(sno) {
-            // Extract class name and row number from the student data
-            // Find the student in the current data to get row number
-            const tables = document.querySelectorAll('.data-table tbody tr');
-            let rowNumber = null;
-            
-            tables.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 0 && cells[0].textContent.trim() === sno) {
-                    // Get the view button to extract row number from its onclick
-                    const viewBtn = row.querySelector('button[onclick*="viewStudent"]');
-                    if (viewBtn) {
-                        const onclickStr = viewBtn.getAttribute('onclick');
-                        const match = onclickStr.match(/viewStudent\('([^']+)',\s*(\d+)\)/);
-                        if (match) {
-                            rowNumber = match[2];
-                        }
-                    }
-                }
-            });
-            
-            if (rowNumber) {
-                // Open edit page in new tab - use teacher route for teachers, admin route for admins
-                const url = userRole === 'admin'
-                    ? `/data-edit?sheet=${encodeURIComponent('Class_' + className)}&row=${rowNumber}`
-                    : `/teacher_student_edit?sheet=${encodeURIComponent('Class_' + className)}&row=${rowNumber}`;
-                window.location.href = url;
-            } else {
-                alert('Unable to find student data for editing');
-            }
+        function editStudent(rowNumber) {
+            // Open edit page - use teacher route for teachers, admin route for admins
+            const url = userRole === 'admin'
+                ? `/data-edit?sheet=${encodeURIComponent('Class_' + className)}&row=${rowNumber}`
+                : `/teacher_student_edit?sheet=${encodeURIComponent('Class_' + className)}&row=${rowNumber}`;
+            window.location.href = url;
         }
 
         // Update active button

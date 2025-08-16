@@ -52,65 +52,113 @@ class GoogleSheetsDataEntry:
         self.setup_google_sheets()
     
     def setup_google_sheets(self):
-        """Setup Google Sheets API connection"""
-        try:
-            # Load credentials from environment variable or file
-            if os.environ.get('GOOGLE_CREDENTIALS_JSON'):
-                # For Railway deployment - credentials as environment variable
-                credentials_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS_JSON'))
-                credentials = Credentials.from_service_account_info(
-                    credentials_info,
-                    scopes=['https://www.googleapis.com/auth/spreadsheets']
+        """Setup Google Sheets API connection with retry logic"""
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Load credentials from environment variable or file
+                if os.environ.get('GOOGLE_CREDENTIALS_JSON'):
+                    # For Railway deployment - credentials as environment variable
+                    credentials_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS_JSON'))
+                    credentials = Credentials.from_service_account_info(
+                        credentials_info,
+                        scopes=['https://www.googleapis.com/auth/spreadsheets']
+                    )
+                elif os.path.exists(self.credentials_file):
+                    # For local development - credentials file
+                    credentials = Credentials.from_service_account_file(
+                        self.credentials_file,
+                        scopes=['https://www.googleapis.com/auth/spreadsheets']
+                    )
+                else:
+                    raise FileNotFoundError("Google Sheets credentials not found")
+                
+                from google.auth.transport.requests import AuthorizedSession
+                
+                # Build service with proper auth and timeouts
+                self.service = build(
+                    'sheets', 'v4', 
+                    credentials=credentials,
+                    cache_discovery=False
                 )
-            elif os.path.exists(self.credentials_file):
-                # For local development - credentials file
-                credentials = Credentials.from_service_account_file(
-                    self.credentials_file,
-                    scopes=['https://www.googleapis.com/auth/spreadsheets']
+                
+                # Test the connection
+                self._execute_request(
+                    self.service.spreadsheets().get(
+                        spreadsheetId=self.spreadsheet_id
+                    )
                 )
-            else:
-                raise FileNotFoundError("Google Sheets credentials not found")
-            
-            self.service = build('sheets', 'v4', credentials=credentials)
 
-            # Create or setup the main worksheet
-            self.setup_main_worksheet()
-            
-        except Exception as e:
-            print(f"Error setting up Google Sheets: {e}")
-            raise
+                # Test connection by accessing main worksheet
+                self._execute_request(
+                    self.service.spreadsheets().get(
+                        spreadsheetId=self.spreadsheet_id
+                    )
+                )
+                
+                print(f"✅ Connected to Google Sheets spreadsheet: {self.spreadsheet_id}")
+                return
+                
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.random()
+                    print(f"Connection attempt {attempt + 1} failed: {e}")
+                    print(f"Retrying in {wait_time:.1f} seconds...")
+                    time.sleep(wait_time)
+                    continue
+        
+        print(f"❌ Failed to connect to Google Sheets after {max_retries} attempts")
+        print(f"Last error: {last_error}")
+        raise last_error
 
-    def _execute_request(self, request, max_retries=5, initial_backoff=0.5):
+    def _execute_request(self, request, max_retries=3, initial_backoff=1.0):
         """Execute a google-api-python-client request with retries on transient errors.
 
         request: a prepared request object (e.g., service.spreadsheets().get(...))
         Returns the parsed JSON response from .execute().
         """
         backoff = initial_backoff
+        last_error = None
+        
         for attempt in range(max_retries):
             try:
-                return request.execute()
+                # Configure request for better SSL handling
+                request.http.timeout = 30  # Increase timeout
+                return request.execute(num_retries=2)  # Allow internal retries
+                
             except HttpError as e:
-                status = None
-                try:
-                    status = int(e.resp.status)
-                except Exception:
-                    pass
-
-                # Retry on 5xx or 429 (rate limit)
-                if status and (500 <= status < 600 or status == 429):
-                    sleep_time = backoff + random.random() * backoff
-                    time.sleep(sleep_time)
+                last_error = e
+                status = getattr(getattr(e, 'resp', None), 'status', None)
+                
+                # Retry on 5xx, 429 (rate limit), or SSL errors
+                if (status and (status >= 500 or status == 429)) or \
+                   isinstance(e, (IOError, ConnectionError)) or \
+                   'SSL' in str(e):
+                    wait_time = backoff + random.random()
+                    if attempt < max_retries - 1:
+                        print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+                        print(f"Retrying in {wait_time:.1f} seconds...")
+                        time.sleep(wait_time)
+                        backoff *= 2
+                        continue
+                raise  # Non-retryable error or last attempt
+                
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    wait_time = backoff + random.random()
+                    print(f"Unexpected error (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {wait_time:.1f} seconds...")
+                    time.sleep(wait_time)
                     backoff *= 2
                     continue
-                # Non-retryable error: re-raise
-                raise
-            except Exception:
-                # For unknown errors, do a short backoff and retry a couple times
-                time.sleep(backoff)
-                backoff *= 2
-        # Final attempt without catching to surface error
-        return request.execute()
+                raise  # Last attempt failed
+        
+        print(f"Request failed after {max_retries} attempts. Last error: {last_error}")
+        raise last_error
     
     def setup_main_worksheet(self):
         """Setup main worksheet with headers if it doesn't exist"""
@@ -322,6 +370,76 @@ class GoogleSheetsDataEntry:
             print(f"Error appending row to {sheet_name}: {e}")
             raise
     
+    def consolidate_data_to_main_sheet(self):
+        """Consolidate all class sheet data to main sheet"""
+        try:
+            print("Starting data consolidation to main sheet...")
+            
+            # Clear main sheet except headers
+            self._execute_request(
+                self.service.spreadsheets().values().clear(
+                    spreadsheetId=self.spreadsheet_id,
+                    range='408070227!A2:R'
+                )
+            )
+            
+            # Get all class sheets
+            sheet_metadata = self._execute_request(
+                self.service.spreadsheets().get(spreadsheetId=self.spreadsheet_id)
+            )
+            
+            all_students = []
+            class_sheets = [sheet['properties']['title'] for sheet in sheet_metadata['sheets'] 
+                          if sheet['properties']['title'].startswith('Class_')]
+            
+            print(f"Found {len(class_sheets)} class sheets to consolidate")
+            
+            for sheet_name in class_sheets:
+                try:
+                    result = self._execute_request(
+                        self.service.spreadsheets().values().get(
+                            spreadsheetId=self.spreadsheet_id, 
+                            range=f'{sheet_name}!A:R'
+                        )
+                    )
+                    
+                    values = result.get('values', [])
+                    if len(values) > 1:  # Skip if only headers or empty
+                        # Add all rows except header
+                        for row in values[1:]:
+                            if row and any(cell.strip() for cell in row if cell):  # Skip empty rows
+                                # Pad row to match header length
+                                while len(row) < len(self.headers):
+                                    row.append('')
+                                all_students.append(row)
+                        
+                        print(f"Added {len(values)-1} students from {sheet_name}")
+                        
+                except Exception as e:
+                    print(f"Error reading {sheet_name}: {e}")
+                    continue
+            
+            # Add all consolidated data to main sheet
+            if all_students:
+                self._execute_request(
+                    self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range='408070227!A:R',
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body={'values': all_students}
+                    )
+                )
+                print(f"Successfully consolidated {len(all_students)} students to main sheet")
+            else:
+                print("No student data found to consolidate")
+                
+            return len(all_students)
+            
+        except Exception as e:
+            print(f"Error consolidating data: {e}")
+            return 0
+    
     def get_all_students(self):
         """Get all students from main sheet"""
         try:
@@ -448,32 +566,82 @@ class GoogleSheetsDataEntry:
             return False
     
     def get_total_students(self):
-        """Get total number of students"""
-        students = self.get_all_students()
-        return len(students)
-    
-    def get_class_student_count(self, class_name):
-        """Get count of students in a specific class"""
+        """Get total number of students with fallback to class sheets if main sheet fails"""
         try:
-            sheet_name = f'Class_{class_name}' if not class_name.startswith('Class_') else class_name
-            
-            if not self.sheet_exists(sheet_name):
-                return 0
-            
-            sheet_data = self.get_sheet_data(sheet_name)
-            if not sheet_data or len(sheet_data) <= 1:
-                return 0
-            
-            # Count non-empty rows (excluding header)
-            count = 0
-            for row_data in sheet_data[1:]:
-                if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
-                    count += 1
-                    
-            return count
+            students = self.get_all_students()
+            if len(students) > 0:
+                return len(students)
+            else:
+                # Fallback: sum from individual class sheets
+                print("Main sheet empty, calculating from class sheets...")
+                return self.get_total_from_class_sheets()
         except Exception as e:
-            print(f"Error getting student count for {class_name}: {e}")
+            print(f"Error getting total students from main sheet: {e}")
+            # Fallback: sum from individual class sheets
+            return self.get_total_from_class_sheets()
+    
+    def get_total_from_class_sheets(self):
+        """Get total students by summing all class sheets"""
+        try:
+            total = 0
+            class_names = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+            for class_name in class_names:
+                try:
+                    count = self.get_class_student_count(class_name)
+                    total += count
+                except Exception as e:
+                    print(f"Error getting count for class {class_name}: {e}")
+                    continue
+            return total
+        except Exception as e:
+            print(f"Error calculating total from class sheets: {e}")
             return 0
+    
+    def get_class_student_count(self, class_name, max_retries=3):
+        """Get count of students in a specific class with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                sheet_name = f'Class_{class_name}' if not class_name.startswith('Class_') else class_name
+                
+                # First check if sheet exists
+                sheet_metadata = self._execute_request(
+                    self.service.spreadsheets().get(spreadsheetId=self.spreadsheet_id)
+                )
+                
+                sheet_exists = any(
+                    sheet['properties']['title'] == sheet_name 
+                    for sheet in sheet_metadata.get('sheets', [])
+                )
+                
+                if not sheet_exists:
+                    print(f"Sheet not found for class {class_name}")
+                    return 0
+                
+                # Get the data with retry-wrapped execute
+                result = self._execute_request(
+                    self.service.spreadsheets().values().get(
+                        spreadsheetId=self.spreadsheet_id,
+                        range=f'{sheet_name}!A:A'
+                    )
+                )
+                
+                values = result.get('values', [])
+                
+                if not values:
+                    return 0
+                
+                # Count non-empty rows (excluding header)
+                count = sum(1 for row in values[1:] if row and row[0])
+                return count
+                
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Attempt {attempt + 1} failed for {class_name}: {e}, retrying...")
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+                print(f"Error getting student count for {class_name} after {max_retries} attempts: {e}")
+                return 0
+        return 0  # All retries failed
     
     def get_class_gender_count(self, class_name, gender):
         """Get count of students by gender in a specific class"""
@@ -576,38 +744,53 @@ class GoogleSheetsDataEntry:
         
         return cnic_number
     
-    def get_class_wise_data(self):
-        """Get data overview for all classes"""
+    def get_class_wise_data(self, use_cache=True):
+        """Get data overview for all classes with caching and retry logic"""
         try:
-            # Get class sheets
-            sheet_metadata = self.service.spreadsheets().get(
-                spreadsheetId=self.spreadsheet_id
-            ).execute()
+            # First try to get all data in one batch request
+            batch_request = self.service.spreadsheets().get(
+                spreadsheetId=self.spreadsheet_id,
+                ranges=['Class_ECE!A:R', 'Class_I!A:R', 'Class_II!A:R', 'Class_III!A:R',
+                       'Class_IV!A:R', 'Class_V!A:R', 'Class_VI!A:R', 'Class_VII!A:R',
+                       'Class_VIII!A:R', 'Class_IX!A:R', 'Class_X!A:R'],
+                includeGridData=False
+            )
             
-            class_sheets = [sheet['properties']['title'] for sheet in sheet_metadata['sheets']
-                          if sheet['properties']['title'].startswith('Class_')]
+            # Execute with retry wrapper
+            sheet_metadata = self._execute_request(batch_request)
             
             class_data = []
-            for sheet_name in class_sheets:
-                # Get student count
-                student_count = self.get_class_student_count(sheet_name.replace('Class_', ''))
-                
-                # Get gender counts
-                male_count = self.get_class_gender_count(sheet_name.replace('Class_', ''), 'Male')
-                female_count = self.get_class_gender_count(sheet_name.replace('Class_', ''), 'Female')
-                
-                class_data.append({
-                    'name': sheet_name.replace('Class_', ''),
-                    'total_students': student_count,
-                    'male_students': male_count,
-                    'female_students': female_count
-                })
+            classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+            
+            for class_name in classes:
+                try:
+                    # Get counts with retries
+                    student_count = self.get_class_student_count(class_name)
+                    male_count = self.get_class_gender_count(class_name, 'Male')
+                    female_count = self.get_class_gender_count(class_name, 'Female')
+                    
+                    class_data.append({
+                        'name': class_name,
+                        'total_students': student_count,
+                        'male_students': male_count,
+                        'female_students': female_count
+                    })
+                except Exception as e:
+                    print(f"Warning: Error getting data for class {class_name}: {e}")
+                    # Add empty data for this class
+                    class_data.append({
+                        'name': class_name,
+                        'total_students': 0,
+                        'male_students': 0,
+                        'female_students': 0
+                    })
             
             return class_data
             
         except Exception as e:
             print(f"Error getting class-wise data: {e}")
-            return []
+            return [{'name': c, 'total_students': 0, 'male_students': 0, 'female_students': 0} 
+                   for c in ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']]
 
     def update_student_record(self, sheet_name, row_number, student_data):
         """Update a student record in the specified sheet"""

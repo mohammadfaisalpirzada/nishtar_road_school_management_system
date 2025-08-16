@@ -4,22 +4,29 @@ Student Data Entry Web Application
 Now using Google Sheets for cloud storage
 """
 
+import os
 import time
+import random
 import threading
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_file
 from google_sheets_data_entry import GoogleSheetsDataEntry
-import os
 
-# Try to import local config.py; if missing (for example not committed to the repo),
-# fall back to reading required values from environment variables so the app can
-# still start on platforms like Railway. This avoids a hard crash during import.
+# Load environment variables first
+load_dotenv()
+
+# Try to import local config.py; if missing, fall back to environment variables
 try:
-    from config import USERS, SECRET_KEY, APP_CONFIG, authenticate_user
+    from config import (
+        USERS, SECRET_KEY, APP_CONFIG, authenticate_user, 
+        GOOGLE_SHEETS_CONFIG
+    )
     CONFIG_SOURCE = 'config.py'
 except Exception as e:
     print(f"Warning: failed to import config.py: {e}. Falling back to environment-based config.")
-    # Build minimal USERS dictionary from environment variables (unsafe defaults for quick deploy)
+    
+    # Build minimal USERS dictionary with admin and class teachers
     admin_pw = os.environ.get('ADMIN_PASSWORD', os.environ.get('ADMIN_PW', 'admin'))
     USERS = {
         'admin': {
@@ -28,25 +35,40 @@ except Exception as e:
             'access': 'all'
         }
     }
+    
+    # Add class teachers if their passwords are set
+    classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+    for cls in classes:
+        env_key = f'TEACHER_{cls}_PASSWORD'
+        if password := os.environ.get(env_key):
+            username = f'class{cls}' if cls != 'ECE' else 'ece'
+            USERS[username] = {
+                'password': password,
+                'role': 'teacher',
+                'access': cls
+            }
 
-    # Secret key from env or a default (override in Railway env vars)
+    # Secret key from env (required in production)
     SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
 
-    # Minimal APP_CONFIG defaults
+    # Google Sheets configuration from environment
+    GOOGLE_SHEETS_CONFIG = {
+        'spreadsheet_id': os.environ.get('GOOGLE_SHEETS_ID'),
+        'credentials_file': os.environ.get('GOOGLE_CREDENTIALS_FILE', 'credentials.json'),
+        'credentials_json': os.environ.get('GOOGLE_CREDENTIALS_JSON')
+    }
+
+    # App configuration with defaults
     APP_CONFIG = {
         'debug': os.environ.get('FLASK_DEBUG', 'False').lower() == 'true',
         'host': os.environ.get('FLASK_HOST', '0.0.0.0'),
-        'port': int(os.environ.get('FLASK_PORT', 5000)),
+        'port': int(os.environ.get('PORT', os.environ.get('FLASK_PORT', 5000))),
         'cache_duration': int(os.environ.get('CACHE_DURATION', 300)),
         'session_timeout': int(os.environ.get('SESSION_TIMEOUT', 3600))
     }
 
     def authenticate_user(username, password):
-        """Fallback authenticator using simple env-provided credentials.
-
-        In production you should provide a `config.py` or set proper environment
-        variables and avoid default weak passwords.
-        """
+        """Fallback authenticator using environment-based credentials."""
         user = USERS.get(username)
         if not user:
             return None
@@ -63,17 +85,45 @@ def _mask(val):
         return '******'
     return s[:3] + '...' + s[-3:]
 
+def check_required_env():
+    """Check for required environment variables and print warnings"""
+    required_vars = {
+        'SECRET_KEY': os.environ.get('SECRET_KEY'),
+        'GOOGLE_SHEETS_ID': os.environ.get('GOOGLE_SHEETS_ID'),
+        'ADMIN_PASSWORD': os.environ.get('ADMIN_PASSWORD')
+    }
+    
+    missing = [k for k, v in required_vars.items() if not v]
+    if missing:
+        print("⚠️ Missing required environment variables:")
+        for var in missing:
+            print(f"  - {var}")
+        print("Please set these variables in .env or in your deployment environment.")
+    
+    if required_vars['SECRET_KEY'] == 'your-secret-key-change-this-in-production':
+        print("⚠️ Using default SECRET_KEY - change this in production!")
+
 def print_startup_summary():
+    """Print a summary of the app's configuration"""
     source = globals().get('CONFIG_SOURCE', 'env')
     enabled = os.environ.get('ENABLE_BACKGROUND_SYNC', 'False').lower() in ('1', 'true', 'yes')
     use_sheets = os.environ.get('USE_GOOGLE_SHEETS', 'False').lower() in ('1', 'true', 'yes')
-    print('----- Startup Summary -----')
+    
+    print('\n----- Startup Summary -----')
     print(f'CONFIG_SOURCE: {source}')
     print(f'DEBUG: {APP_CONFIG.get("debug", False)}')
     print(f'ENABLE_BACKGROUND_SYNC: {enabled}')
     print(f'USE_GOOGLE_SHEETS: {use_sheets}')
     print(f'SECRET_KEY: {_mask(SECRET_KEY)}')
-    print('---------------------------')
+    print(f'GOOGLE_SHEETS_ID: {_mask(os.environ.get("GOOGLE_SHEETS_ID", ""))}')
+    print(f'ADMIN_PASSWORD set: {bool(os.environ.get("ADMIN_PASSWORD"))}')
+    print('Session Security:')
+    print(f'  COOKIE_SECURE: {app.config.get("SESSION_COOKIE_SECURE", False)}')
+    print(f'  COOKIE_HTTPONLY: {app.config.get("SESSION_COOKIE_HTTPONLY", True)}')
+    print('---------------------------\n')
+    
+    # Check required environment variables
+    check_required_env()
 
 from functools import wraps
 from dotenv import load_dotenv
@@ -106,21 +156,60 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Initialize Google Sheets data entry lazily and safely.
-# Do not raise on failure to allow the web process to start (healthchecks must succeed).
+# Initialize Google Sheets data entry with proper configuration and retry logic
 data_entry = None
-use_sheets = os.environ.get('USE_GOOGLE_SHEETS', 'False').lower() in ('1', 'true', 'yes')
-if use_sheets:
-    try:
-        data_entry = GoogleSheetsDataEntry()
-        print("Using Google Sheets for data storage")
-    except Exception as e:
-        # Log and continue; the app will run in a degraded mode without Google Sheets.
-        print(f"Warning: Failed to initialize Google Sheets: {e}")
-        print("Continuing without Google Sheets. Set USE_GOOGLE_SHEETS=true and provide credentials in env to enable.")
-        data_entry = None
-else:
-    print("Google Sheets usage disabled (USE_GOOGLE_SHEETS not set). Running in offline mode.")
+sheets_config = GOOGLE_SHEETS_CONFIG if 'GOOGLE_SHEETS_CONFIG' in globals() else {
+    'spreadsheet_id': os.environ.get('GOOGLE_SHEETS_ID'),
+    'credentials_file': os.environ.get('GOOGLE_CREDENTIALS_FILE', 'credentials.json'),
+    'credentials_json': os.environ.get('GOOGLE_CREDENTIALS_JSON')
+}
+
+def init_google_sheets(max_retries=3):
+    """Initialize Google Sheets connection with retries"""
+    global data_entry
+    
+    if not sheets_config.get('spreadsheet_id'):
+        print("⚠️ No GOOGLE_SHEETS_ID found in environment or config")
+        return False
+        
+    print(f"Initializing Google Sheets connection to spreadsheet: {sheets_config['spreadsheet_id']}")
+    
+    for attempt in range(max_retries):
+        try:
+            data_entry = GoogleSheetsDataEntry(
+                spreadsheet_id=sheets_config['spreadsheet_id'],
+                credentials_file=sheets_config.get('credentials_file')
+            )
+            print("✅ Google Sheets connection initialized successfully")
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Connection attempt {attempt + 1}/{max_retries} failed:")
+            print(f"   Error: {error_msg}")
+            
+            # Don't retry on SSL errors - they tend to persist
+            if 'SSL' in error_msg or 'ssl' in error_msg.lower():
+                print("   SSL error detected - skipping retries")
+                break
+                
+            if attempt < max_retries - 1:
+                wait_time = (2 ** attempt) + random.random()
+                print(f"   Retrying in {wait_time:.1f} seconds...")
+                time.sleep(wait_time)
+                continue
+                
+    print("❌ Failed to initialize Google Sheets after all retries")
+    data_entry = None
+    return False
+
+# Try to initialize Google Sheets (non-blocking)
+try:
+    init_google_sheets()
+except Exception as e:
+    print(f"⚠️ Google Sheets initialization failed: {e}")
+    print("📱 Server will start without Google Sheets connection")
+    data_entry = None
 
 # Cache system for better performance
 class DataCache:
@@ -233,6 +322,10 @@ def start_background_sync_if_needed():
         This avoids spinning up background threads in every Gunicorn worker by default.
         """
         enabled = os.environ.get('ENABLE_BACKGROUND_SYNC', 'False').lower() in ('1', 'true', 'yes')
+        # Temporarily disable background sync to prevent SSL crashes
+        print(f"Background sync disabled to prevent SSL connection issues (enabled={enabled}, __name__={__name__})")
+        return
+        
         if __name__ == '__main__' or enabled:
                 print(f"Starting background sync (enabled={enabled}, __name__={__name__})")
                 sync_thread = threading.Thread(target=background_sync, daemon=True)
@@ -300,16 +393,39 @@ def dashboard():
     user_role = session.get('role')
     user_access = session.get('access')
     
+    # Check Google Sheets connection
+    if not data_entry:
+        flash("⚠️ Google Sheets connection is not available. Some features may be limited.", "warning")
+        if user_role == 'admin':
+            # Only admin can retry connection
+            return redirect(url_for('admin_dashboard', retry_sheets='1'))
+    
     if user_role == 'admin':
         return redirect(url_for('admin_dashboard'))
     else:
+        # Teachers can only access their assigned class
+        if not user_access or user_access == 'all':
+            flash("Access level not properly configured", "error")
+            return redirect(url_for('logout'))
         return redirect(url_for('class_dashboard', class_name=user_access))
 
 @app.route('/form')
+@app.route('/form/<class_name>')
 @login_required
-def form():
+def form(class_name=None):
     user_access = session.get('access')
-    return render_template('form.html', user_access=user_access)
+    user_role = session.get('role')
+    
+    # If class_name is provided, validate access
+    if class_name and user_access != 'all' and user_access != class_name:
+        flash('Access denied to this class', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # If teacher is accessing without class_name, redirect to their class
+    if not class_name and user_role == 'teacher' and user_access != 'all':
+        return redirect(url_for('form', class_name=user_access))
+    
+    return render_template('form.html', user_access=user_access, selected_class=class_name, user_role=user_role)
 
 @app.route('/submit', methods=['POST'])
 @login_required
@@ -463,11 +579,13 @@ def admin_dashboard():
         # Prefer cached class-wise data to avoid inconsistent counts and quota spikes
         total_classes = 11  # ECE + I-X
         class_stats = {}
+        total_students = 0
+        sheets_connection_error = False
 
         # Prefer cached full student list (single stable source) to compute total
         all_students_cached = data_cache.get_all_data()
         cached = None
-        total_students = 0
+        
         if all_students_cached is not None:
             try:
                 total_students = len(all_students_cached)
@@ -499,20 +617,34 @@ def admin_dashboard():
             all_classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
             for class_name in all_classes:
                 try:
-                    class_count = data_entry.get_class_student_count(class_name)
-                    total_students += class_count
-                    class_stats[class_name] = class_count
+                    if data_entry:
+                        class_count = data_entry.get_class_student_count(class_name)
+                        total_students += class_count
+                        class_stats[class_name] = class_count
+                    else:
+                        class_stats[class_name] = 0
+                        sheets_connection_error = True
                 except Exception as e:
                     print(f"Error getting count for class {class_name}: {e}")
                     class_stats[class_name] = 0
+                    sheets_connection_error = True
+
+        # If we couldn't get any data, show a warning but don't crash
+        if sheets_connection_error or (total_students == 0 and not cached):
+            flash("⚠️ Google Sheets connection issues detected. Data may not be current.", "warning")
 
         return render_template('admin_dashboard.html', 
                              total_students=total_students,
                              total_classes=total_classes,
                              class_stats=class_stats)
     except Exception as e:
-        flash(f'Error loading dashboard: {str(e)}', 'error')
-        return render_template('error.html', error=str(e))
+        print(f"Admin dashboard error: {e}")
+        # Provide fallback data to prevent complete failure
+        flash(f'⚠️ Dashboard loading issues: {str(e)}. Showing limited data.', 'warning')
+        return render_template('admin_dashboard.html', 
+                             total_students=0,
+                             total_classes=11,
+                             class_stats={})
 
 @app.route('/class_dashboard/<class_name>')
 @login_required
@@ -1030,6 +1162,43 @@ def api_student_details(sheet_name, row_number):
         if user_access != 'all' and user_access != sheet_name.replace('Class_', ''):
             return jsonify({'success': False, 'message': 'Access denied'})
         
+        if data_entry is None:
+            return jsonify({'success': False, 'message': 'Google Sheets not configured.'}), 503
+            
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        if not sheet_data or len(sheet_data) < row_number:
+            return jsonify({'success': False, 'message': 'Student not found'})
+        
+        # Get headers and student data
+        headers = sheet_data[0]
+        student_row = sheet_data[row_number - 1]  # Convert to 0-indexed
+        
+        # Pad student row if needed
+        while len(student_row) < len(headers):
+            student_row.append('')
+        
+        # Create student dictionary
+        student = {}
+        for i, header in enumerate(headers):
+            student[header] = student_row[i] if i < len(student_row) else ''
+        
+        return jsonify({'success': True, 'student': student})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/teacher_student_details/<sheet_name>/<int:row_number>')
+@login_required
+def api_teacher_student_details(sheet_name, row_number):
+    """API endpoint to get student details for teachers"""
+    try:
+        # Validate access
+        user_access = session.get('access')
+        if user_access != 'all' and user_access != sheet_name.replace('Class_', ''):
+            return jsonify({'success': False, 'message': 'Access denied'})
+        
+        if data_entry is None:
+            return jsonify({'success': False, 'message': 'Google Sheets not configured.'}), 503
+            
         sheet_data = data_entry.get_sheet_data(sheet_name)
         if not sheet_data or len(sheet_data) < row_number:
             return jsonify({'success': False, 'message': 'Student not found'})
