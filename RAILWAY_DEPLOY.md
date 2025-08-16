@@ -45,8 +45,11 @@ If the deployment fails:
 
 ## Security Notes
 
-1. Use strong passwords for all accounts
-2. Change the default admin password
+1. **CRITICAL**: Change ALL passwords in .env file to secure values:
+   - Set a strong ADMIN_PASSWORD (not 'admin')
+   - Set strong passwords for all TEACHER_*_PASSWORD variables
+   - Generate a secure SECRET_KEY
+2. Verify all authentication credentials are properly set in environment variables only
 3. Keep your Google service account credentials secure
 4. Enable SESSION_COOKIE_SECURE in production
 

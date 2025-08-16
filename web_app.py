@@ -27,7 +27,12 @@ except Exception as e:
     print(f"Warning: failed to import config.py: {e}. Falling back to environment-based config.")
     
     # Build minimal USERS dictionary with admin and class teachers
-    admin_pw = os.environ.get('ADMIN_PASSWORD', os.environ.get('ADMIN_PW', 'admin'))
+    admin_pw = os.environ.get('ADMIN_PASSWORD') or os.environ.get('ADMIN_PW')
+    if not admin_pw:
+        print("❌ CRITICAL: ADMIN_PASSWORD environment variable is required!")
+        print("Please set ADMIN_PASSWORD in your .env file with a strong password.")
+        exit(1)
+    
     USERS = {
         'admin': {
             'password': admin_pw,
@@ -36,20 +41,33 @@ except Exception as e:
         }
     }
     
-    # Add class teachers if their passwords are set
+    # Add class teachers - all passwords must be set in environment
     classes = ['ECE', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+    missing_teacher_passwords = []
+    
     for cls in classes:
         env_key = f'TEACHER_{cls}_PASSWORD'
-        if password := os.environ.get(env_key):
+        password = os.environ.get(env_key)
+        if password:
             username = f'class{cls}' if cls != 'ECE' else 'ece'
             USERS[username] = {
                 'password': password,
                 'role': 'teacher',
                 'access': cls
             }
+        else:
+            missing_teacher_passwords.append(cls)
+    
+    if missing_teacher_passwords:
+        print(f"⚠️ WARNING: Missing teacher passwords for classes: {', '.join(missing_teacher_passwords)}")
+        print("These teachers will not be able to log in. Set their passwords in .env file.")
 
-    # Secret key from env (required in production)
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
+    # Secret key from env (required for security)
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        print("❌ CRITICAL: SECRET_KEY environment variable is required!")
+        print("Please set SECRET_KEY in your .env file with a strong random key.")
+        exit(1)
 
     # Google Sheets configuration from environment
     GOOGLE_SHEETS_CONFIG = {
@@ -100,8 +118,12 @@ def check_required_env():
             print(f"  - {var}")
         print("Please set these variables in .env or in your deployment environment.")
     
-    if required_vars['SECRET_KEY'] == 'your-secret-key-change-this-in-production':
-        print("⚠️ Using default SECRET_KEY - change this in production!")
+    # Check for weak SECRET_KEY values
+    weak_keys = ['change-me-in-production', 'your-secret-key-change-this-in-production', 'default-dev-key-change-in-production']
+    if required_vars['SECRET_KEY'] in weak_keys:
+        print("❌ CRITICAL: Using weak/default SECRET_KEY - this is a security risk!")
+        print("Please set a strong, random SECRET_KEY in your .env file.")
+        exit(1)
 
 def print_startup_summary():
     """Print a summary of the app's configuration"""
@@ -1419,8 +1441,8 @@ if __name__ == '__main__':
     print("Starting Student Data Entry Web Server...")
     print(f"Access from mobile: http://YOUR_PC_IP:{port}")
     print(f"Access locally: http://localhost:{port}")
-    print("\nDefault login credentials:")
-    print("Admin: admin/admin")
-    print("Class teachers: class1/class1, class2/class2, etc.")
-    print("ECE teacher: ece/ece")
+    print("Login credentials are loaded from .env file:")
+    print(f"Admin: admin/{admin_pw if admin_pw else 'NOT_SET'}")
+    print("Class teachers: Use usernames like 'classI', 'classII', etc. with passwords from .env")
+    print("ECE teacher: ece/[password from .env]")
     app.run(host='0.0.0.0', port=port, debug=debug)

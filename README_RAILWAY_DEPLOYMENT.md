@@ -81,7 +81,7 @@ Set these variables in Railway dashboard:
 ## Default Login Credentials
 
 - **Admin**: username: `admin`, password: `admin`
-- **Class Teachers**: username: `class1`, password: `class1` (and so on for class2, class3, etc.)
+- **Class Teachers**: username: `classI`, password: `[from TEACHER_I_PASSWORD env var]` (and so on for classII, classIII, etc.)
 - **ECE Teacher**: username: `ece`, password: `ece`
 
 ## Important Notes
@@ -97,7 +97,9 @@ Set these variables in Railway dashboard:
    - Test the integration locally before deploying
 
 3. **Security**: 
-   - Change default passwords before deploying to production
+   - **CRITICAL**: Change ALL passwords in .env file before deploying to production
+   - Set strong, unique passwords for ADMIN_PASSWORD and all TEACHER_*_PASSWORD variables
+   - Generate a secure SECRET_KEY using: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
    - Keep Google service account credentials secure
    - Never commit `credentials.json` to your repository
 
