@@ -494,100 +494,248 @@
                 font-size: 0.8rem;
             }
 
-                    /* Mobile Table - Improved Card Layout */
-        .data-table {
-            font-size: 0.85rem;
+        /* Mobile ID Card Layout - Clean and Professional */
+        @media (max-width: 768px) {
+            /* Force table to be responsive */
+            .data-table {
+                font-size: 0.9rem !important;
+                border: none !important;
+                background: transparent !important;
+            }
+
+            /* Hide table headers on mobile */
+            .data-table thead {
+                display: none !important;
+            }
+
+            /* Force all table elements to be blocks */
+            .data-table tbody, 
+            .data-table tr, 
+            .data-table td {
+                display: block !important;
+                width: 100% !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            /* Style each row as an ID card */
+            .data-table tr {
+                background: white !important;
+                border: 2px solid #e2e8f0 !important;
+                margin-bottom: 1.5rem !important;
+                border-radius: 16px !important;
+                padding: 1.5rem !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+                transition: all 0.3s ease !important;
+                position: relative !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            .data-table tr:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+                border-color: #4299e1 !important;
+            }
+
+            /* Top accent line */
+            .data-table tr:before {
+                content: '' !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                height: 4px !important;
+                background: linear-gradient(135deg, #4299e1, #667eea) !important;
+                border-radius: 16px 16px 0 0 !important;
+                opacity: 0.8 !important;
+            }
+
+            /* Style each cell for ID card layout */
+            .data-table td {
+                border: none !important;
+                position: relative !important;
+                padding: 0.8rem 0 !important;
+                padding-left: 0 !important;
+                text-align: left !important;
+                white-space: normal !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+                min-height: auto !important;
+                display: block !important;
+                align-items: flex-start !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            /* Show only essential information for ID card */
+            .data-table td[data-label="S.No"],
+            .data-table td[data-label="Gender"],
+            .data-table td[data-label="Contact"],
+            .data-table td[data-label="Section"] {
+                display: none !important;
+            }
+
+            /* ID Card Information Layout */
+            .data-table td[data-label="GR#"] {
+                font-size: 1rem !important;
+                font-weight: 600 !important;
+                color: #2d3748 !important;
+                padding-bottom: 0.5rem !important;
+                border-bottom: 2px solid #e2e8f0 !important;
+            }
+
+            .data-table td[data-label="Student Name"] {
+                font-size: 1.4rem !important;
+                font-weight: 700 !important;
+                color: #1a202c !important;
+                padding: 1rem 0 0.5rem 0 !important;
+                border-bottom: none !important;
+            }
+
+            .data-table td[data-label="Father's Name"] {
+                font-size: 1rem !important;
+                font-weight: 500 !important;
+                color: #4a5568 !important;
+                padding: 0.5rem 0 !important;
+                border-bottom: none !important;
+            }
+
+            .data-table td[data-label="Class"] {
+                font-size: 1rem !important;
+                font-weight: 600 !important;
+                color: #2b6cb0 !important;
+                padding: 0.5rem 0 !important;
+                border-bottom: none !important;
+            }
+
+            /* Remove border from last cell */
+            .data-table td:last-child {
+                border-bottom: none !important;
+                padding-bottom: 0 !important;
+            }
+
+            /* Style labels for ID card */
+            .data-table td:before {
+                content: attr(data-label) !important;
+                position: static !important;
+                display: inline-block !important;
+                font-weight: 600 !important;
+                color: #718096 !important;
+                font-size: 0.85rem !important;
+                margin-right: 0.5rem !important;
+                min-width: auto !important;
+                height: auto !important;
+            }
+
+            /* Mobile Action Buttons - ID Card Style */
+            .data-table td[data-label="Actions"] {
+                padding: 1.5rem 0 0 0 !important;
+                padding-left: 0 !important;
+                justify-content: center !important;
+                border-bottom: none !important;
+                margin-top: 1rem !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            .data-table td[data-label="Actions"]:before {
+                display: none !important;
+            }
+
+            /* Force action buttons to be visible in a single row */
+            .action-buttons {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+                align-items: center !important;
+                justify-content: center !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            .action-row {
+                display: none !important;
+            }
+
+            /* Style action buttons for ID card */
+            .action-buttons .table-btn {
+                margin: 0 !important;
+                padding: 0.8rem 1.2rem !important;
+                font-size: 0.85rem !important;
+                border-radius: 10px !important;
+                min-width: 80px !important;
+                flex: 1 !important;
+                max-width: 100px !important;
+                height: 44px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border: 2px solid #e2e8f0 !important;
+                cursor: pointer !important;
+                font-weight: 600 !important;
+                transition: all 0.3s ease !important;
+                background: white !important;
+                color: #4a5568 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+                float: none !important;
+                clear: both !important;
+            }
+
+            /* Button hover effects */
+            .action-buttons .table-btn:hover {
+                background: #4299e1 !important;
+                border-color: #4299e1 !important;
+                color: white !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3) !important;
+            }
+
+            /* Ensure buttons are clickable */
+            .table-btn {
+                pointer-events: auto !important;
+                z-index: 10 !important;
+            }
         }
 
-        .data-table,
-        .data-table thead,
-        .data-table tbody,
-        .data-table th,
-        .data-table td,
-        .data-table tr {
-            display: block;
+        /* Clean, minimal button styles */
+        .table-btn {
+            background: transparent !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #4a5568 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
-        .data-table thead tr {
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
+        .table-btn:hover {
+            background: rgba(66, 153, 225, 0.1) !important;
+            border-color: #4299e1 !important;
+            color: #2b6cb0 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.15);
         }
 
-        .data-table tr {
-            background: white;
-            border: 2px solid #e2e8f0;
-            margin-bottom: 0.75rem;
-            border-radius: 8px;
-            padding: 0.75rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-            position: relative;
+        .table-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(66, 153, 225, 0.2);
         }
 
-        .data-table tr:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-            border-color: #4299e1;
+        /* Remove old colorful button styles */
+        .btn-view, .btn-edit, .btn-print, .btn-delete {
+            background: transparent !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #4a5568 !important;
         }
 
-        .data-table tr:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(135deg, #4299e1, #3182ce);
-            border-radius: 12px 12px 0 0;
-        }
-
-        .data-table td {
-            border: none;
-            position: relative;
-            padding: 0.4rem 0;
-            padding-left: 40%;
-            text-align: left;
-            white-space: normal;
-            border-bottom: 1px solid #f1f5f9;
-            min-height: 1.8rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .data-table td:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .data-table td:before {
-            content: attr(data-label);
-            position: absolute;
-            left: 0;
-            width: 35%;
-            padding-right: 10px;
-            white-space: nowrap;
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            height: 100%;
-        }
-
-        /* Mobile Action Buttons - Positioned at the end */
-        .data-table td[data-label="Actions"] {
-            padding: 0.75rem 0;
-            padding-left: 0;
-            justify-content: center;
-            border-bottom: none;
-            margin-top: 0.5rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .data-table td[data-label="Actions"]:before {
-            display: none;
+        .btn-view:hover, .btn-edit:hover, .btn-print:hover, .btn-delete:hover {
+            background: rgba(66, 153, 225, 0.1) !important;
+            border-color: #4299e1 !important;
+            color: #2b6cb0 !important;
         }
 
         .mobile-actions {
@@ -840,6 +988,23 @@
             padding: 1rem;
             border-radius: 8px;
             margin: 1rem 0;
+        }
+
+        /* Search Styles */
+        #studentSearch:focus {
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            outline: none;
+        }
+
+        #clearSearchBtn:hover {
+            background: #c53030 !important;
+            transform: scale(1.1);
+        }
+
+        /* Search active state */
+        .search-active #studentSearch {
+            border-color: #48bb78;
+            background-color: #f0fff4;
         }
 
         @media (max-width: 480px) {
@@ -1157,7 +1322,13 @@
                                 <div style="position: relative; flex: 1; max-width: 400px;">
                                     <input type="text" id="studentSearch" placeholder="Search students by name, father's name, or GR#..." 
                                            style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; transition: all 0.3s ease;"
-                                           onkeyup="filterStudents()" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'">
+                                           oninput="filterStudents()" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'"
+                                           title="Type to search students in real-time">
+                                    <button onclick="clearSearch()" 
+                                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #e53e3e; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: none;"
+                                            id="clearSearchBtn">
+                                        ✕
+                                    </button>
                                 </div>
                                 <select id="classFilter" onchange="filterStudents()" 
                                         style="padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer;">
@@ -1190,7 +1361,7 @@
                     
                     <!-- Students Table -->
                     <div style="padding: 0; background: white; overflow-x: auto;">
-                        <table class="data-table">
+                        <table class="data-table" id="studentsDataTable">
                             <thead>
                                 <tr>
                                     <th style="width: 60px;">S.No</th>
@@ -1241,25 +1412,31 @@
                             </span>
                         </td>
                         
-                        <!-- Actions Column (Last) -->
+                        <!-- Actions Column with ALL FOUR BUTTONS in Two Rows -->
                         <td data-label="Actions">
-                            <div class="mobile-actions">
-                                <button onclick="viewStudent('${student.sheet_name}', ${student.row_number})" 
-                                        class="table-btn btn-view">
-                                    View
-                                </button>
-                                <button onclick="editStudent('${student.sheet_name}', ${student.row_number})" 
-                                        class="table-btn btn-edit">
-                                    Edit
-                                </button>
-                                <button onclick="printStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
-                                        class="table-btn btn-print">
-                                    Print
-                                </button>
-                                <button onclick="deleteStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
-                                        class="table-btn btn-delete">
-                                    Del
-                                </button>
+                            <div class="action-buttons">
+                                <!-- Row 1: View and Edit -->
+                                <div class="action-row">
+                                    <button onclick="viewStudent('${student.sheet_name}', ${student.row_number})" 
+                                            class="table-btn btn-view" title="View Student">
+                                        View
+                                    </button>
+                                    <button onclick="editStudent('${student.sheet_name}', ${student.row_number})" 
+                                            class="table-btn btn-edit" title="Edit Student">
+                                        Edit
+                                    </button>
+                                </div>
+                                <!-- Row 2: Print and Delete -->
+                                <div class="action-row">
+                                    <button onclick="printStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
+                                            class="table-btn btn-print" title="Print Student">
+                                        Print
+                                    </button>
+                                    <button onclick="deleteStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
+                                            class="table-btn btn-delete" title="Delete Student">
+                                        Del
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -1282,6 +1459,31 @@
             `;
             
             document.getElementById('data-content').innerHTML = tableHTML;
+            
+            // Initialize DataTable for better mobile experience (without pagination/search controls)
+            setTimeout(() => {
+                if (typeof $ !== 'undefined' && $.fn.DataTable) {
+                    $('#studentsDataTable').DataTable({
+                        responsive: true,
+                        pageLength: 1000, // Show all students
+                        lengthMenu: false, // Hide length menu
+                        searching: false, // Hide search box
+                        info: false, // Hide info text
+                        paging: false, // Hide pagination
+                        ordering: true, // Keep sorting
+                        columnDefs: [
+                            {
+                                targets: -1, // Actions column
+                                orderable: false,
+                                searchable: false,
+                                width: '200px'
+                            }
+                        ],
+                        order: [[0, 'asc']], // Sort by S.No by default
+                        dom: 't' // Only show table, no controls
+                    });
+                }
+            }, 100);
         }
 
         // Show class-wise data
@@ -1516,27 +1718,40 @@
         function filterStudents() {
             const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
             const classFilter = document.getElementById('classFilter').value;
-            const cards = document.querySelectorAll('.student-card');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            
+            // Show/hide clear button
+            if (searchTerm) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+            
+            // Get all student rows
+            const studentRows = document.querySelectorAll('.student-row');
             let visibleCount = 0;
             
-            cards.forEach(card => {
-                const studentName = card.getAttribute('data-student-name');
-                const fatherName = card.getAttribute('data-father-name');
-                const grNumber = card.getAttribute('data-gr-number');
-                const studentClass = card.getAttribute('data-class');
+            studentRows.forEach(row => {
+                const studentName = row.getAttribute('data-student-name') || '';
+                const fatherName = row.getAttribute('data-father-name') || '';
+                const grNumber = row.getAttribute('data-gr-number') || '';
+                const studentClass = row.getAttribute('data-class') || '';
                 
+                // Check if row matches search term
                 const matchesSearch = !searchTerm || 
                     studentName.includes(searchTerm) || 
                     fatherName.includes(searchTerm) || 
                     grNumber.includes(searchTerm);
-                    
+                
+                // Check if row matches class filter
                 const matchesClass = !classFilter || studentClass === classFilter;
                 
+                // Show/hide row based on filters
                 if (matchesSearch && matchesClass) {
-                    card.style.display = '';
+                    row.style.display = '';
                     visibleCount++;
                 } else {
-                    card.style.display = 'none';
+                    row.style.display = 'none';
                 }
             });
             
@@ -1544,6 +1759,37 @@
             const visibleCountElement = document.getElementById('visibleCount');
             if (visibleCountElement) {
                 visibleCountElement.textContent = visibleCount;
+            }
+            
+            // Update total count display
+            const totalCountElement = document.getElementById('studentCount');
+            if (totalCountElement) {
+                totalCountElement.textContent = visibleCount;
+            }
+        }
+
+        // Clear search function
+        function clearSearch() {
+            document.getElementById('studentSearch').value = '';
+            document.getElementById('classFilter').value = '';
+            document.getElementById('clearSearchBtn').style.display = 'none';
+            
+            // Show all rows
+            const studentRows = document.querySelectorAll('.student-row');
+            studentRows.forEach(row => {
+                row.style.display = '';
+            });
+            
+            // Update counts
+            const totalStudents = studentRows.length;
+            const visibleCountElement = document.getElementById('visibleCount');
+            const totalCountElement = document.getElementById('studentCount');
+            
+            if (visibleCountElement) {
+                visibleCountElement.textContent = totalStudents;
+            }
+            if (totalCountElement) {
+                totalCountElement.textContent = totalStudents;
             }
         }
 
@@ -1671,5 +1917,11 @@
             });
         }
     </script>
+    
+    <!-- DataTables JavaScript for better mobile experience -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 </body>
 </html>
