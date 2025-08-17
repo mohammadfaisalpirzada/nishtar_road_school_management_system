@@ -420,6 +420,18 @@
                 <button class="view-btn" onclick="showGenderData('Female')">Girls Students</button>
                 <button class="view-btn" onclick="showAttendance()" disabled style="opacity: 0.5; cursor: not-allowed;">Attendance (Coming Soon)</button>
             </div>
+            
+            <!-- Search Section -->
+            <div class="search-section" style="margin: 1.5rem 0; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+                <div style="position: relative; max-width: 400px; margin: 0 auto;">
+                    <input type="text" id="studentSearchInput" placeholder="🔍 Search students by name, father's name, or GR#..." 
+                           style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #28a745; border-radius: 25px; font-size: 0.9rem; background: white; transition: all 0.3s ease; outline: none;"
+                           onkeyup="filterClassStudents()" 
+                           onfocus="this.style.borderColor='#20c997'; this.style.boxShadow='0 0 0 3px rgba(40, 167, 69, 0.1)'" 
+                           onblur="this.style.borderColor='#28a745'; this.style.boxShadow='none'">
+                </div>
+                <div id="searchResults" style="margin-top: 0.5rem; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.8);"></div>
+            </div>
             <div id="data-content">
                 <table class="data-table">
                     <thead>
@@ -754,6 +766,49 @@
             }
         });
 
+        // Global variable to store current students data
+        let currentStudentsData = [];
+        
+        // Filter students function
+        function filterClassStudents() {
+            const searchTerm = document.getElementById('studentSearchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('.data-table tbody tr');
+            let visibleCount = 0;
+            let totalCount = 0;
+            
+            rows.forEach(row => {
+                // Skip the "no students" message row
+                if (row.children.length === 1 && row.children[0].getAttribute('colspan')) {
+                    return;
+                }
+                
+                totalCount++;
+                const studentName = row.children[1]?.textContent.toLowerCase() || '';
+                const fatherName = row.children[2]?.textContent.toLowerCase() || '';
+                const grNumber = row.children[4]?.textContent.toLowerCase() || '';
+                
+                const matchesSearch = !searchTerm || 
+                    studentName.includes(searchTerm) || 
+                    fatherName.includes(searchTerm) || 
+                    grNumber.includes(searchTerm);
+                
+                if (matchesSearch) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Update search results
+            const searchResults = document.getElementById('searchResults');
+            if (searchTerm) {
+                searchResults.innerHTML = `Showing ${visibleCount} of ${totalCount} students`;
+            } else {
+                searchResults.innerHTML = '';
+            }
+        }
+        
         // Load initial data
         document.addEventListener('DOMContentLoaded', function() {
             showClassData();

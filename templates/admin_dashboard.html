@@ -6,6 +6,11 @@
     <title>Admin Dashboard - Student Management System</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    
+    <!-- DataTables CSS for better mobile experience -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <style>
         * {
             margin: 0;
@@ -296,25 +301,50 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            font-size: 0.85rem;
         }
 
         .data-table th,
         .data-table td {
-            padding: 0.75rem;
+            padding: 0.6rem 0.5rem;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
+            word-wrap: break-word;
+            max-width: 150px;
         }
 
         .data-table th {
             background: #f7fafc;
             font-weight: 600;
             color: #4a5568;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .data-table tr:hover {
-            background: #f7fafc;
+            background: #f0f9ff;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
         }
+
+        /* Specific column widths for better layout */
+        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 60px; } /* S.No */
+        .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 80px; } /* GR# */
+        .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 180px; } /* Student Name */
+        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 150px; } /* Father's Name */
+        .data-table th:nth-child(5), .data-table td:nth-child(5) { width: 80px; } /* Gender */
+        .data-table th:nth-child(6), .data-table td:nth-child(6) { width: 100px; } /* Religion */
+        .data-table th:nth-child(7), .data-table td:nth-child(7) { width: 120px; } /* Contact */
+        .data-table th:nth-child(8), .data-table td:nth-child(8) { width: 130px; } /* CNIC */
+        .data-table th:nth-child(9), .data-table td:nth-child(9) { width: 100px; } /* DOB */
+        .data-table th:nth-child(10), .data-table td:nth-child(10) { width: 120px; } /* Guardian */
+        .data-table th:nth-child(11), .data-table td:nth-child(11) { width: 80px; } /* Class */
+        .data-table th:nth-child(12), .data-table td:nth-child(12) { width: 80px; } /* Section */
+        .data-table th:nth-child(13), .data-table td:nth-child(13) { width: 120px; } /* Remarks */
+        .data-table th:nth-child(14), .data-table td:nth-child(14) { width: 140px; } /* Actions */
 
         .table-btn {
             padding: 0.4rem 0.8rem;
@@ -325,6 +355,11 @@
             font-weight: 500;
             margin-right: 0.5rem;
             transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            height: 32px;
         }
 
         .btn-view {
@@ -334,6 +369,24 @@
 
         .btn-view:hover {
             background: #3182ce;
+        }
+
+        .btn-edit {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #38a169;
+        }
+
+        .btn-print {
+            background: #805ad5;
+            color: white;
+        }
+
+        .btn-print:hover {
+            background: #6b46c1;
         }
 
         .btn-delete {
@@ -441,60 +494,377 @@
                 font-size: 0.8rem;
             }
 
-            /* Mobile Table */
-            .data-table {
-                font-size: 0.8rem;
+                    /* Mobile Table - Improved Card Layout */
+        .data-table {
+            font-size: 0.85rem;
+        }
+
+        .data-table,
+        .data-table thead,
+        .data-table tbody,
+        .data-table th,
+        .data-table td,
+        .data-table tr {
+            display: block;
+        }
+
+        .data-table thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+
+        .data-table tr {
+            background: white;
+            border: 2px solid #e2e8f0;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            padding: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .data-table tr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            border-color: #4299e1;
+        }
+
+        .data-table tr:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .data-table td {
+            border: none;
+            position: relative;
+            padding: 0.4rem 0;
+            padding-left: 40%;
+            text-align: left;
+            white-space: normal;
+            border-bottom: 1px solid #f1f5f9;
+            min-height: 1.8rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .data-table td:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .data-table td:before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0;
+            width: 35%;
+            padding-right: 10px;
+            white-space: nowrap;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Mobile Action Buttons - Positioned at the end */
+        .data-table td[data-label="Actions"] {
+            padding: 0.75rem 0;
+            padding-left: 0;
+            justify-content: center;
+            border-bottom: none;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .data-table td[data-label="Actions"]:before {
+            display: none;
+        }
+
+        .mobile-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            align-items: center;
+        }
+
+        .mobile-actions .table-btn {
+            margin: 0.25rem;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            min-width: 60px;
+            flex: 1;
+            max-width: 80px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Ensure desktop view also shows buttons properly */
+        .data-table td[data-label="Actions"] .mobile-actions {
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+        }
+
+        .data-table td[data-label="Actions"] .mobile-actions .table-btn {
+            flex: 0 1 auto;
+            max-width: none;
+        }
+
+        /* Debug: Ensure action buttons are visible */
+        .data-table td[data-label="Actions"] {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .mobile-actions .table-btn {
+            border: 1px solid transparent;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Hide less important columns on mobile */
+        .data-table td[data-label="S.No"],
+        .data-table td[data-label="GR#"],
+        .data-table td[data-label="Father's Name"],
+        .data-table td[data-label="Contact"],
+        .data-table td[data-label="Section"] {
+            display: none;
+        }
+
+        /* Show only essential data on mobile */
+        .data-table td[data-label="Student Name"],
+        .data-table td[data-label="Gender"],
+        .data-table td[data-label="Class"] {
+            display: flex;
+        }
+
+        /* Hide column width restrictions on mobile */
+        .data-table th, .data-table td {
+            max-width: none;
+            width: auto;
+        }
+        }
+
+        /* Student Cards Layout */
+        .students-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .student-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .student-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            position: relative;
+        }
+
+        .card-header h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .card-info div {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .card-info div::before {
+            content: '•';
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+        }
+
+        .card-actions {
+            padding: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .card-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .btn-details {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-details:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .btn-view {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #3182ce;
+        }
+
+        .btn-delete {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #e53e3e;
+        }
+
+        .card-details {
+            display: none;
+            padding: 1rem;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-size: 0.9rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        /* Empty State Styling */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #4299e1;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Message Styles */
+        .info {
+            background: #bee3f8;
+            color: #2b6cb0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 480px) {
+            .students-container {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
             }
 
-            .data-table,
-            .data-table thead,
-            .data-table tbody,
-            .data-table th,
-            .data-table td,
-            .data-table tr {
-                display: block;
+            .card-info {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
             }
 
-            .data-table thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
+            .card-actions {
+                flex-direction: column;
             }
 
-            .data-table tr {
-                background: white;
-                border: 1px solid #e2e8f0;
-                margin-bottom: 1rem;
-                border-radius: 8px;
-                padding: 1rem;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            .card-btn {
+                flex: none;
+                width: 100%;
             }
 
-            .data-table td {
-                border: none;
-                position: relative;
-                padding: 0.5rem 0;
-                padding-left: 40%;
-                text-align: left;
-                white-space: normal;
-            }
-
-            .data-table td:before {
-                content: attr(data-label);
-                position: absolute;
-                left: 0;
-                width: 35%;
-                padding-right: 10px;
-                white-space: nowrap;
-                font-weight: bold;
-                color: #4a5568;
-                font-size: 0.8rem;
-            }
-
-            .table-btn {
-                margin: 0.25rem 0.25rem 0.25rem 0;
-                padding: 0.4rem 0.6rem;
-                font-size: 0.75rem;
+            .details-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
             }
         }
 
@@ -632,11 +1002,11 @@
                         <div>View All Data</div>
                     </button>
                     <button onclick="showClassWiseData()" class="action-btn">
-                        <div class="action-icon">📚</div>
+                        <div class="action-icon">📋</div>
                         <div>Class-wise View</div>
                     </button>
                     <a href="{{ url_for('data_edit') }}" class="action-btn">
-                        <div class="action-icon">✏️</div>
+                        <div class="action-icon">Edit</div>
                         <div>Edit Data</div>
                     </a>
                     <a href="{{ url_for('reports') }}" class="action-btn">
@@ -644,11 +1014,11 @@
                         <div>Generate Reports</div>
                     </a>
                     <button onclick="consolidateData()" class="action-btn">
-                        <div class="action-icon">📋</div>
+                        <div class="action-icon">📁</div>
                         <div>Consolidate Data</div>
                     </button>
                     <a href="{{ url_for('settings') }}" class="action-btn">
-                        <div class="action-icon">⚙️</div>
+                        <div class="action-icon">Settings</div>
                         <div>Settings</div>
                     </a>
                 </div>
@@ -658,7 +1028,7 @@
         <!-- Class Management Section -->
         <div class="section-card">
             <div class="section-header">
-                <div class="section-title">🏫 Class Management</div>
+                <div class="section-title">Class Management</div>
                 <div class="section-subtitle">Access individual class data</div>
             </div>
             <div class="section-content">
@@ -681,7 +1051,7 @@
         <!-- Data View Section -->
         <div class="section-card data-view-section" id="data-section">
             <div class="section-header">
-                <div class="section-title">📋 Student Data</div>
+                <div class="section-title">Student Data</div>
                 <div class="section-subtitle">View and manage student information</div>
             </div>
             <div class="section-content">
@@ -708,10 +1078,10 @@
             <div class="footer-logo">MS</div>
             <div class="footer-text">Developed by <strong>MasterSahub</strong></div>
             <div class="footer-contact">
-                <div class="contact-item">📧 Contact for Custom Solutions</div>
-                <div class="contact-item">💻 Web Development Services</div>
-                <div class="contact-item">📱 Mobile App Development</div>
-                <div class="contact-item">🎓 Educational Software Solutions</div>
+                <div class="contact-item">✉ Contact for Custom Solutions</div>
+                <div class="contact-item">⌨ Web Development Services</div>
+                <div class="contact-item">☎ Mobile App Development</div>
+                <div class="contact-item">⚡ Educational Software Solutions</div>
             </div>
             <div class="footer-copyright">
                 © 2025 MasterSahub. Empowering Education Through Technology.
@@ -764,7 +1134,7 @@
             if (students.length === 0) {
                 document.getElementById('data-content').innerHTML = `
                     <div style="text-align: center; padding: 3rem; background: rgba(255,255,255,0.95); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📊</div>
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📈</div>
                         <h3 style="color: #4a5568; margin-bottom: 0.5rem;">No Students Found</h3>
                         <p style="color: #718096; margin: 0;">There are currently no students in the database.</p>
                     </div>
@@ -776,7 +1146,7 @@
                 <div style="background: rgba(255,255,255,0.95); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
                     <!-- Professional Header -->
                     <div style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 1.5rem; text-align: center;">
-                        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 600;">📋 All Students Database</h2>
+                        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 600;">All Students Database</h2>
                         <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">Complete student records overview</p>
                     </div>
                     
@@ -785,7 +1155,7 @@
                         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: space-between;">
                             <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 200px;">
                                 <div style="position: relative; flex: 1; max-width: 400px;">
-                                    <input type="text" id="studentSearch" placeholder="🔍 Search students by name, father's name, or GR#..." 
+                                    <input type="text" id="studentSearch" placeholder="Search students by name, father's name, or GR#..." 
                                            style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; transition: all 0.3s ease;"
                                            onkeyup="filterStudents()" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'">
                                 </div>
@@ -807,103 +1177,88 @@
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                 <span style="background: #4299e1; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
-                                    📊 Total: <span id="studentCount">${students.length}</span> students
+                                    Total: <span id="studentCount">${students.length}</span> students
                                 </span>
                                 <button onclick="exportStudentData()" 
                                         style="background: #48bb78; color: white; border: none; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.3s ease;"
                                         onmouseover="this.style.background='#38a169'" onmouseout="this.style.background='#48bb78'">
-                                    📥 Export
+                                    Export
                                 </button>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Professional Data Table -->
-                    <div style="overflow-x: auto;">
-                        <table class="data-table" id="studentsTable" style="margin: 0; border-radius: 0;">
+                    <!-- Students Table -->
+                    <div style="padding: 0; background: white; overflow-x: auto;">
+                        <table class="data-table">
                             <thead>
-                                <tr style="background: linear-gradient(135deg, #f7fafc, #edf2f7);">
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">S.No</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🆔 GR#</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👤 Student Name</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👨 Father's Name</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">⚧ Gender</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🕌 Religion</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📞 Contact</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🆔 CNIC/B-Form</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🎂 DOB</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">👤 Guardian</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">🏫 Class</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📚 Section</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10;">📝 Remarks</th>
-                                    <th style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748; border-bottom: 2px solid #4299e1; position: sticky; top: 0; background: #f7fafc; z-index: 10; text-align: center;">⚡ Actions</th>
+                                <tr>
+                                    <th style="width: 60px;">S.No</th>
+                                    <th style="width: 80px;">GR#</th>
+                                    <th style="width: 180px;">Student Name</th>
+                                    <th style="width: 150px;">Father's Name</th>
+                                    <th style="width: 80px;">Gender</th>
+                                    <th style="width: 120px;">Contact</th>
+                                    <th style="width: 80px;">Class</th>
+                                    <th style="width: 80px;">Section</th>
+                                    <th style="width: 200px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
             `;
             
             students.forEach((student, index) => {
-                const rowClass = index % 2 === 0 ? 'even-row' : 'odd-row';
-                const genderIcon = student.gender === 'Male' ? '👦' : student.gender === 'Female' ? '👧' : '⚧';
-                const genderColor = student.gender === 'Male' ? '#3182ce' : student.gender === 'Female' ? '#e53e3e' : '#718096';
-                
-                // Safely convert to string and then to lowercase
+                // Safely convert to string and then to lowercase for search functionality
                 const studentNameLower = String(student.student_name || '').toLowerCase();
                 const fatherNameLower = String(student.father_name || '').toLowerCase();
                 const grNumberLower = String(student.gr_number || '').toLowerCase();
                 
                 tableHTML += `
-                    <tr class="student-row ${rowClass}" data-student-name="${studentNameLower}" 
+                    <tr class="student-row" data-student-name="${studentNameLower}" 
                         data-father-name="${fatherNameLower}" 
                         data-gr-number="${grNumberLower}" 
-                        data-class="${student.student_class}" 
-                        style="transition: all 0.3s ease; border-bottom: 1px solid #e2e8f0;"
-                        onmouseover="this.style.background='#f0f9ff'; this.style.transform='scale(1.01)'; this.style.boxShadow='0 2px 8px rgba(66,153,225,0.1)'"
-                        onmouseout="this.style.background='${index % 2 === 0 ? '#ffffff' : '#f9fafb'}'; this.style.transform='scale(1)'; this.style.boxShadow='none'">
-                        <td data-label="S.No" style="padding: 1rem 0.75rem; font-weight: 500; color: #4a5568;">${student.sno}</td>
-                        <td data-label="GR#" style="padding: 1rem 0.75rem; font-family: monospace; font-weight: 500; color: #2d3748;">${student.gr_number || 'N/A'}</td>
-                        <td data-label="Student Name" style="padding: 1rem 0.75rem; font-weight: 600; color: #2d3748;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.2rem;">${genderIcon}</span>
-                                ${student.student_name || 'N/A'}
-                            </div>
+                        data-class="${student.student_class}">
+                        
+                        <!-- Data Columns (Desktop) -->
+                        <td data-label="S.No">${student.sno || 'N/A'}</td>
+                        <td data-label="GR#">${student.gr_number || 'N/A'}</td>
+                        <td data-label="Student Name" style="font-weight: 500;">${student.student_name || 'N/A'}</td>
+                        <td data-label="Father's Name">${student.father_name || 'N/A'}</td>
+                        <td data-label="Gender">
+                            <span style="background: ${student.gender === 'Male' ? '#3182ce' : '#e53e3e'}; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">
+                                ${student.gender || 'N/A'}
+                            </span>
                         </td>
-                        <td data-label="Father's Name" style="padding: 1rem 0.75rem; color: #4a5568;">${student.father_name || 'N/A'}</td>
-                        <td data-label="Gender" style="padding: 1rem 0.75rem;">
-                            <span style="color: ${genderColor}; font-weight: 500;">${student.gender || 'N/A'}</span>
-                        </td>
-                        <td data-label="Religion" style="padding: 1rem 0.75rem; color: #4a5568;">${student.religion || 'N/A'}</td>
-                        <td data-label="Contact" style="padding: 1rem 0.75rem; font-family: monospace; color: #4a5568;">${student.contact_number || 'N/A'}</td>
-                        <td data-label="CNIC/B-Form" style="padding: 1rem 0.75rem; font-family: monospace; font-size: 0.85rem; color: #4a5568;">${student.cnic_bform || 'N/A'}</td>
-                        <td data-label="DOB" style="padding: 1rem 0.75rem; color: #4a5568;">${student.date_of_birth || 'N/A'}</td>
-                        <td data-label="Guardian" style="padding: 1rem 0.75rem; color: #4a5568;">
-                            <div style="font-size: 0.85rem;">
-                                <div style="font-weight: 500;">${student.guardian_name || 'N/A'}</div>
-                                <div style="color: #718096; font-size: 0.8rem;">${student.guardian_relation || ''}</div>
-                            </div>
-                        </td>
-                        <td data-label="Class" style="padding: 1rem 0.75rem;">
-                            <span style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                        <td data-label="Contact" style="font-family: monospace;">${student.contact_number || 'N/A'}</td>
+                        <td data-label="Class">
+                            <span style="background: #4299e1; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">
                                 ${student.student_class}
                             </span>
                         </td>
-                        <td data-label="Section" style="padding: 1rem 0.75rem; color: #4a5568;">${student.class_section || 'N/A'}</td>
-                        <td data-label="Remarks" style="padding: 1rem 0.75rem; color: #4a5568; font-style: italic;">${student.remarks || 'N/A'}</td>
-                        <td data-label="Actions" style="padding: 1rem 0.75rem; text-align: center;">
-                            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <td data-label="Section">
+                            <span style="background: #48bb78; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">
+                                ${student.class_section || 'N/A'}
+                            </span>
+                        </td>
+                        
+                        <!-- Actions Column (Last) -->
+                        <td data-label="Actions">
+                            <div class="mobile-actions">
                                 <button onclick="viewStudent('${student.sheet_name}', ${student.row_number})" 
-                                        class="table-btn btn-view" 
-                                        style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.25rem;"
-                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(66,153,225,0.3)'"
-                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                                    👁️ View
+                                        class="table-btn btn-view">
+                                    View
+                                </button>
+                                <button onclick="editStudent('${student.sheet_name}', ${student.row_number})" 
+                                        class="table-btn btn-edit">
+                                    Edit
+                                </button>
+                                <button onclick="printStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
+                                        class="table-btn btn-print">
+                                    Print
                                 </button>
                                 <button onclick="deleteStudent('${student.sheet_name}', ${student.row_number}, '${student.student_name}')" 
-                                        class="table-btn btn-delete" 
-                                        style="background: linear-gradient(135deg, #e53e3e, #c53030); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.25rem;"
-                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(229,62,62,0.3)'"
-                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                                    🗑️ Delete
+                                        class="table-btn btn-delete">
+                                    Del
                                 </button>
                             </div>
                         </td>
@@ -919,8 +1274,8 @@
                     <!-- Professional Footer -->
                     <div style="background: #f7fafc; padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
                         <p style="margin: 0; color: #718096; font-size: 0.85rem;">
-                            📊 Displaying <span id="visibleCount">${students.length}</span> of ${students.length} students | 
-                            🏫 Govt Girls Secondary School Nishtar Road Khi
+                            Displaying <span id="visibleCount">${students.length}</span> of ${students.length} students | 
+                            Govt Girls Secondary School Nishtar Road Khi
                         </p>
                     </div>
                 </div>
@@ -952,7 +1307,7 @@
         function displayClassWiseData(classes, summary) {
             let contentHTML = `
                 <div style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; text-align: center;">
-                    <h2 style="margin: 0 0 1rem 0;">📊 School Overview</h2>
+                    <h2 style="margin: 0 0 1rem 0;">School Overview</h2>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
                         <div>
                             <div style="font-size: 2rem; font-weight: bold;">${summary.total_students}</div>
@@ -979,15 +1334,15 @@
                          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" 
                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                         <h3 style="color: #4299e1; margin-bottom: 1rem; display: flex; align-items: center; font-size: 1.1rem;">
-                            <span style="margin-right: 0.5rem;">${classData.name === 'ECE' ? '🎨' : '📚'}</span>
+                            <span style="margin-right: 0.5rem;">${classData.name === 'ECE' ? '[ART]' : '[CLASS]'}</span>
                             ${classData.name === 'ECE' ? 'ECE Class' : `Class ${classData.name}`}
                         </h3>
                         <div style="margin-bottom: 1rem;">
                             <p style="margin: 0; font-size: 0.95rem;">Total Students: <strong style="color: #2d3748;">${classData.total_students}</strong></p>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
-                            <p style="margin: 0;">👦 Boys: <strong style="color: #3182ce;">${classData.male_students}</strong></p>
-                            <p style="margin: 0;">👧 Girls: <strong style="color: #e53e3e;">${classData.female_students}</strong></p>
+                            <p style="margin: 0;">Boys: <strong style="color: #3182ce;">${classData.male_students}</strong></p>
+                            <p style="margin: 0;">Girls: <strong style="color: #e53e3e;">${classData.female_students}</strong></p>
                         </div>
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; text-align: center;">
                             <small style="color: #718096;">Click to view class details</small>
@@ -1075,6 +1430,27 @@
             window.open(url, '_blank');
         }
 
+        // Edit student
+        function editStudent(sheetName, rowNumber) {
+            // Open student edit in new tab
+            const url = `/data_edit?sheet=${encodeURIComponent(sheetName)}&row=${rowNumber}`;
+            window.open(url, '_blank');
+        }
+
+        // Print student
+        function printStudent(sheetName, rowNumber, studentName) {
+            // Open student details in new tab for printing
+            const url = `/print_student?sheet=${encodeURIComponent(sheetName)}&row=${rowNumber}`;
+            const printWindow = window.open(url, '_blank');
+            
+            // Wait for page to load then print
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print();
+                }, 1000);
+            };
+        }
+
         // Delete student
         function deleteStudent(sheetName, rowNumber, studentName) {
             if (confirm(`Are you sure you want to delete student "${studentName}"?\n\nThis action cannot be undone and will permanently remove the student from the database.`)) {
@@ -1082,7 +1458,7 @@
                 const deleteButtons = document.querySelectorAll(`button[onclick*="deleteStudent('${sheetName}', ${rowNumber}"]`);
                 deleteButtons.forEach(btn => {
                     btn.disabled = true;
-                    btn.innerHTML = '🗑️ Deleting...';
+                    btn.innerHTML = 'Deleting...';
                 });
                 
                 fetch(`/api/delete_student/${encodeURIComponent(sheetName)}/${rowNumber}`, {
@@ -1103,7 +1479,7 @@
                         // Re-enable buttons on error
                         deleteButtons.forEach(btn => {
                             btn.disabled = false;
-                            btn.innerHTML = '🗑️ Delete';
+                            btn.innerHTML = 'Delete';
                         });
                     }
                 })
@@ -1112,24 +1488,42 @@
                     // Re-enable buttons on error
                     deleteButtons.forEach(btn => {
                         btn.disabled = false;
-                        btn.innerHTML = '🗑️ Delete';
+                        btn.innerHTML = 'Delete';
                     });
                 });
             }
         }
 
         // Filter students function
+        // Toggle details function for cards
+        function toggleDetails(cardId) {
+            const detailsDiv = document.getElementById('details-' + cardId);
+            const button = event.target;
+            
+            if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
+                detailsDiv.style.display = 'block';
+                button.textContent = 'Hide';
+                button.style.background = '#4299e1';
+                button.style.color = 'white';
+            } else {
+                detailsDiv.style.display = 'none';
+                button.textContent = 'Details';
+                button.style.background = '#f7fafc';
+                button.style.color = '#4a5568';
+            }
+        }
+
         function filterStudents() {
             const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
             const classFilter = document.getElementById('classFilter').value;
-            const rows = document.querySelectorAll('.student-row');
+            const cards = document.querySelectorAll('.student-card');
             let visibleCount = 0;
             
-            rows.forEach(row => {
-                const studentName = row.getAttribute('data-student-name');
-                const fatherName = row.getAttribute('data-father-name');
-                const grNumber = row.getAttribute('data-gr-number');
-                const studentClass = row.getAttribute('data-class');
+            cards.forEach(card => {
+                const studentName = card.getAttribute('data-student-name');
+                const fatherName = card.getAttribute('data-father-name');
+                const grNumber = card.getAttribute('data-gr-number');
+                const studentClass = card.getAttribute('data-class');
                 
                 const matchesSearch = !searchTerm || 
                     studentName.includes(searchTerm) || 
@@ -1139,10 +1533,10 @@
                 const matchesClass = !classFilter || studentClass === classFilter;
                 
                 if (matchesSearch && matchesClass) {
-                    row.style.display = '';
+                    card.style.display = '';
                     visibleCount++;
                 } else {
-                    row.style.display = 'none';
+                    card.style.display = 'none';
                 }
             });
             
@@ -1163,6 +1557,12 @@
             if (confirm('This will consolidate all student data from all classes into a single Excel file (408070227.xlsx). Do you want to proceed?')) {
                 showMessage('Starting data consolidation...', 'info');
                 
+                // Show loading state
+                const consolidateBtn = event.target.closest('.action-btn');
+                const originalText = consolidateBtn.innerHTML;
+                consolidateBtn.innerHTML = '<div class="loading-spinner"></div><div>Processing...</div>';
+                consolidateBtn.disabled = true;
+                
                 fetch('/api/consolidate_data', {
                     method: 'POST',
                     headers: {
@@ -1173,7 +1573,7 @@
                     if (response.ok) {
                         // Check if response is actually a file (Excel)
                         const contentType = response.headers.get('content-type');
-                        if (contentType && contentType.includes('spreadsheetml')) {
+                        if (contentType && contentType.includes('spreadsheetml') || contentType.includes('application/octet-stream')) {
                             return response.blob();
                         } else {
                             throw new Error('Invalid response format');
@@ -1203,6 +1603,11 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showMessage(error.message || 'Error consolidating data. Please try again.', 'error');
+                })
+                .finally(() => {
+                    // Reset button state
+                    consolidateBtn.innerHTML = originalText;
+                    consolidateBtn.disabled = false;
                 });
             }
         }

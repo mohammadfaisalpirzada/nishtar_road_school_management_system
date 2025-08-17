@@ -905,25 +905,44 @@ def api_next_class_snos():
 @app.route('/api/consolidate_data', methods=['POST'])
 @admin_required
 def api_consolidate_data():
-    """Trigger consolidation in background to avoid blocking the request"""
+    """Consolidate all student data and return Excel file"""
     try:
-        def run_consolidation():
-            try:
-                print("🔁 Starting background consolidation...")
-                # Re-import to pick up local changes if any
-                importlib.reload(consolidate_data)
-                consolidate_data.consolidate_student_data()
-                print("✅ Background consolidation finished")
-                # Clear cache after consolidation
-                data_cache.clear()
-            except Exception as e:
-                print(f"❌ Consolidation failed in background: {e}")
-
-        t = threading.Thread(target=run_consolidation, daemon=True)
-        t.start()
-        return jsonify({'success': True, 'message': 'Consolidation started in background'})
+        if data_entry is None:
+            return jsonify({'success': False, 'message': 'Google Sheets not configured.'}), 503
+        
+        print("🔁 Starting data consolidation...")
+        
+        # Run consolidation
+        consolidate_data.consolidate_student_data()
+        
+        # Check if file was created
+        output_file = '408070227.xlsx'
+        if not os.path.exists(output_file):
+            return jsonify({'success': False, 'message': 'Consolidation failed - output file not created'})
+        
+        print("✅ Consolidation completed successfully")
+        
+        # Clear cache after consolidation
+        data_cache.clear()
+        
+        # Return the file for download
+        return send_file(
+            output_file,
+            as_attachment=True,
+            download_name='408070227.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        print(f"❌ Consolidation failed: {e}")
+        return jsonify({'success': False, 'message': f'Consolidation failed: {str(e)}'})
+    finally:
+        # Clean up the file after sending
+        try:
+            if os.path.exists(output_file):
+                os.remove(output_file)
+        except:
+            pass
 
 @app.route('/api/class_data/<class_name>')
 @login_required
