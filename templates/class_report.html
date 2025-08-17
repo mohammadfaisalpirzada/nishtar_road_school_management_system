@@ -249,18 +249,42 @@
 
         function loadReportData() {
             fetch(`/api/class_report_data/${className}`)
-                .then(response => response.json())
+                .then(response => {
+                    // Check if response is redirected to login page
+                    if (response.redirected && response.url.includes('/login')) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    // Check if response is not ok
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    // Check content type to ensure it's JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON - possibly redirected to login');
+                    }
+                    
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data && data.success) {
                         reportData = data;
                         renderStatistics();
                         renderCharts();
-                    } else {
-                        showError('Failed to load report data: ' + data.message);
+                    } else if (data) {
+                        showError('Failed to load report data: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
-                    showError('Error loading report data: ' + error.message);
+                    console.error('Error loading report data:', error);
+                    if (error.message.includes('login') || error.message.includes('JSON')) {
+                        showError('Session expired. Please <a href="/login">login again</a>.');
+                    } else {
+                        showError('Error loading report data: ' + error.message);
+                    }
                 });
         }
 

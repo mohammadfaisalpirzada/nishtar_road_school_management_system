@@ -1047,55 +1047,6 @@ def api_gender_data(class_name, gender):
         return jsonify({'success': True, 'students': students})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
-    
-    # Check if user has access to this class
-    if user_access != 'all' and user_access != class_name:
-        return jsonify({'success': False, 'message': 'Access denied'})
-    
-    try:
-        # Get all class data first
-        sheet_name = f"Class_{class_name}"
-        
-        if not data_entry.sheet_exists(sheet_name):
-            return jsonify({'success': True, 'students': []})
-        
-        sheet_data = data_entry.get_sheet_data(sheet_name)
-        students = []
-        
-        if not sheet_data or len(sheet_data) <= 1:
-            return jsonify({'success': True, 'students': []})
-        
-        # Get headers from first row
-        headers = sheet_data[0] if sheet_data else []
-        header_indices = {header: idx for idx, header in enumerate(headers)}
-        
-        # Extract student data filtered by gender
-        for row_idx, row_data in enumerate(sheet_data[1:], start=2):
-            if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
-                # Pad row_data with empty strings if needed
-                while len(row_data) < len(headers):
-                    row_data.append('')
-                
-                student_gender = row_data[header_indices.get('Gender', 4)] if 'Gender' in header_indices else ''
-                
-                # Filter by gender
-                if student_gender.strip().lower() == gender.lower():
-                    student = {
-                        'sno': row_data[header_indices.get('S.No', 0)] if 'S.No' in header_indices else '',
-                        'row_number': row_idx,
-                        'class_sno': row_data[header_indices.get('Class_S.No', 0)] if 'Class_S.No' in header_indices else '',
-                        'student_name': row_data[header_indices.get('Student Name', 2)] if 'Student Name' in header_indices else '',
-                        'father_name': row_data[header_indices.get("Father's Name", 3)] if "Father's Name" in header_indices else '',
-                        'class_section': row_data[header_indices.get('Class Section', 14)] if 'Class Section' in header_indices else '',
-                        'gr_number': row_data[header_indices.get('GR#', 1)] if 'GR#' in header_indices else '',
-                        'gender': student_gender,
-                        'remarks': row_data[header_indices.get('Remarks', 17)] if 'Remarks' in header_indices else ''
-                    }
-                    students.append(student)
-        
-        return jsonify({'success': True, 'students': students})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/all_students')
 @admin_required
@@ -1299,6 +1250,112 @@ def api_delete_student(sheet_name, row_number):
             'success': False,
             'message': f'Error deleting student: {str(e)}'
         })
+
+@app.route('/api/class_report_data/<class_name>')
+@login_required
+def api_class_report_data(class_name):
+    """API endpoint to get class report data for analytics"""
+    user_access = session.get('access')
+    
+    # Check if user has access to this class
+    if user_access != 'all' and user_access != class_name:
+        return jsonify({'success': False, 'message': 'Access denied'})
+    
+    try:
+        sheet_name = f"Class_{class_name}"
+        
+        if not data_entry.sheet_exists(sheet_name):
+            return jsonify({
+                'success': True,
+                'gender_data': {'Male': 0, 'Female': 0},
+                'section_data': {},
+                'age_data': {},
+                'total_students': 0
+            })
+        
+        sheet_data = data_entry.get_sheet_data(sheet_name)
+        
+        if not sheet_data or len(sheet_data) <= 1:
+            return jsonify({
+                'success': True,
+                'gender_data': {'Male': 0, 'Female': 0},
+                'section_data': {},
+                'age_data': {},
+                'total_students': 0
+            })
+        
+        # Get headers from first row
+        headers = sheet_data[0] if sheet_data else []
+        header_indices = {header: idx for idx, header in enumerate(headers)}
+        
+        # Initialize counters
+        gender_data = {'Male': 0, 'Female': 0}
+        section_data = {}
+        age_data = {}
+        total_students = 0
+        
+        # Process each student row
+        for row_data in sheet_data[1:]:
+            if row_data and len(row_data) > 0 and row_data[0]:  # Check if S.No exists
+                # Pad row_data with empty strings if needed
+                while len(row_data) < len(headers):
+                    row_data.append('')
+                
+                total_students += 1
+                
+                # Count gender
+                gender = row_data[header_indices.get('Gender', 4)] if 'Gender' in header_indices else ''
+                if gender.strip().lower() in ['male', 'boy']:
+                    gender_data['Male'] += 1
+                elif gender.strip().lower() in ['female', 'girl']:
+                    gender_data['Female'] += 1
+                
+                # Count sections
+                section = row_data[header_indices.get('Class Section', 14)] if 'Class Section' in header_indices else ''
+                if section.strip():
+                    section_data[section.strip()] = section_data.get(section.strip(), 0) + 1
+                
+                # Count ages (calculate from date of birth)
+                dob = row_data[header_indices.get('Date of Birth', 8)] if 'Date of Birth' in header_indices else ''
+                if dob.strip():
+                    try:
+                        # Try to parse date and calculate age
+                        from datetime import datetime
+                        # Handle different date formats
+                        for date_format in ['%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y']:
+                            try:
+                                birth_date = datetime.strptime(dob.strip(), date_format)
+                                age = datetime.now().year - birth_date.year
+                                if datetime.now().month < birth_date.month or (datetime.now().month == birth_date.month and datetime.now().day < birth_date.day):
+                                    age -= 1
+                                
+                                # Group ages into ranges
+                                if age <= 5:
+                                    age_group = '0-5'
+                                elif age <= 10:
+                                    age_group = '6-10'
+                                elif age <= 15:
+                                    age_group = '11-15'
+                                else:
+                                    age_group = '16+'
+                                
+                                age_data[age_group] = age_data.get(age_group, 0) + 1
+                                break
+                            except ValueError:
+                                continue
+                    except Exception:
+                        pass  # Skip invalid dates
+        
+        return jsonify({
+            'success': True,
+            'gender_data': gender_data,
+            'section_data': section_data,
+            'age_data': age_data,
+            'total_students': total_students
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/refresh_cache', methods=['POST'])
 @admin_required

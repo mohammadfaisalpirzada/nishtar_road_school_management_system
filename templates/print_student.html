@@ -9,7 +9,7 @@
     <style>
         @page {
             size: A4;
-            margin: 1cm;
+            margin: 0.8cm;
         }
         
         * {
@@ -73,7 +73,7 @@
         }
         
         .info-section {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             page-break-inside: avoid;
         }
         
@@ -111,10 +111,11 @@
         }
         
         .signature-section {
-            margin-top: 40px;
+            margin-top: 30px;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
+            page-break-inside: avoid;
         }
         
         .signature-box {
@@ -132,10 +133,11 @@
         }
         
         .footer {
-            margin-top: 30px;
+            margin-top: 20px;
             text-align: center;
-            font-size: 10pt;
+            font-size: 9pt;
             color: #666;
+            page-break-inside: avoid;
         }
         
         .print-date {
@@ -184,7 +186,7 @@
         
         <!-- Print Date -->
         <div class="print-date">
-            Printed on: {{ moment().format('DD/MM/YYYY HH:mm') }}
+            <span id="print-date">Printed on: </span>
         </div>
         
         <!-- Document Title -->
@@ -342,7 +344,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date();
             const dateStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-            const dateElement = document.querySelector('.print-date');
+            const dateElement = document.getElementById('print-date');
             if (dateElement) {
                 dateElement.innerHTML = 'Printed on: ' + dateStr;
             }
