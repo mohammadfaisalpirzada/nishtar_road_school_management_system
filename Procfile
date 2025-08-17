@@ -1,1 +1,1 @@
-web: gunicorn -b 0.0.0.0:$PORT web_app:app
+web: gunicorn --bind 0.0.0.0:$PORT --workers ${WEB_CONCURRENCY:-2} --worker-connections ${WORKER_CONNECTIONS:-1000} --timeout ${WORKER_TIMEOUT:-120} --keep-alive ${KEEP_ALIVE:-2} --max-requests 1000 --max-requests-jitter 100 --preload web_app:app
